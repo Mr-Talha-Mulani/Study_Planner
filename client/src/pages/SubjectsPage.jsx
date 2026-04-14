@@ -108,19 +108,33 @@ export default function SubjectsPage() {
               </div>
             </div>
 
-            {/* Progress */}
-            <div className="card mb-4" style={{ padding: '16px' }}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold">Overall Completion</span>
-                <span className="font-bold" style={{ color: subject.color }}>{progress}%</span>
+            {/* Progress Stats Row (Inspired by Image 5) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div className="card" style={{ padding: '1.25rem' }}>
+                <div className="text-muted text-xs uppercase font-bold mb-1">Overall</div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, fontFamily: 'var(--font-display)', lineHeight: 1 }}>{progress}%</div>
+                <div className="progress-bar-container" style={{ height: 4, marginTop: '8px' }}>
+                  <div className="progress-bar" style={{ width: `${progress}%`, background: subject.color }} />
+                </div>
               </div>
-              <div className="progress-bar-container" style={{ height: 10 }}>
-                <div className="progress-bar" style={{ width: `${progress}%`, background: subject.color }} />
+              <div className="card" style={{ padding: '1.25rem' }}>
+                <div className="text-muted text-xs uppercase font-bold mb-1">Completed</div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, fontFamily: 'var(--font-display)', lineHeight: 1 }}>
+                  {currentTopics.filter(t => t.status === 'COMPLETED').length}
+                </div>
+                <div className="text-muted text-xs mt-1">{currentTopics.length} total</div>
               </div>
-              <div className="flex gap-4 mt-3">
-                <span className="text-xs text-muted">✅ {currentTopics.filter(t => t.status === 'COMPLETED').length} done</span>
-                <span className="text-xs text-muted">🔄 {currentTopics.filter(t => t.status === 'IN_PROGRESS').length} in progress</span>
-                <span className="text-xs text-muted">⏳ {currentTopics.filter(t => t.status === 'NOT_STARTED').length} remaining</span>
+              <div className="card" style={{ padding: '1.25rem' }}>
+                <div className="text-muted text-xs uppercase font-bold mb-1">Mid-Term</div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, fontFamily: 'var(--font-display)', lineHeight: 1 }}>
+                  {midTopics.length ? Math.round((midTopics.filter(t => t.status === 'COMPLETED').length / midTopics.length) * 100) : 0}%
+                </div>
+              </div>
+              <div className="card" style={{ padding: '1.25rem' }}>
+                <div className="text-muted text-xs uppercase font-bold mb-1">End-Term</div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, fontFamily: 'var(--font-display)', lineHeight: 1 }}>
+                   {endTopics.length ? Math.round((endTopics.filter(t => t.status === 'COMPLETED').length / endTopics.length) * 100) : 0}%
+                </div>
               </div>
             </div>
 

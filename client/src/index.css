@@ -65,11 +65,11 @@
   --space-16: 4rem;
   --space-20: 5rem;
 
-  /* Border Radius - slightly irregular */
+  /* Border Radius - Refined Doodle (More crisp, less disoriented) */
   --radius-sm: 4px;
-  --radius-md: 255px 15px 225px 15px/15px 225px 15px 255px;
-  --radius-lg: 255px 25px 225px 25px/25px 225px 25px 255px;
-  --radius-xl: 300px 30px 200px 30px/30px 200px 30px 300px;
+  --radius-md: 185px 8px 175px 12px/12px 175px 8px 185px;
+  --radius-lg: 255px 15px 245px 18px/18px 245px 15px 255px;
+  --radius-xl: 300px 20px 280px 25px/25px 300px 20px 280px;
   --radius-full: 9999px;
 
   /* Typography */
@@ -141,6 +141,10 @@ button {
 input, textarea, select {
   font-family: inherit;
   font-size: inherit;
+  border: 2px solid #000;
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  background: #fff;
 }
 
 /* ============================================================
@@ -159,12 +163,13 @@ input, textarea, select {
   padding: var(--space-6);
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-4);
   position: fixed;
   left: 0;
   top: 0;
   z-index: 100;
   transition: transform var(--transition-base);
+  box-shadow: 4px 0 0 #000;
 }
 
 .sidebar-logo {
@@ -250,13 +255,12 @@ input, textarea, select {
 .nav-item.active::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 60%;
-  background: var(--grad-primary);
-  border-radius: var(--radius-full);
+  left: -24px;
+  top: 4px;
+  bottom: 4px;
+  width: 6px;
+  background: #000;
+  border-radius: 0 4px 4px 0;
 }
 
 .nav-item .nav-icon {
@@ -298,6 +302,7 @@ input, textarea, select {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-bottom: 2px solid #000;
 }
 
 .page-container {
@@ -351,8 +356,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px #000;
 }
 
 .card-glass {
