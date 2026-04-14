@@ -109,21 +109,21 @@ const seedData = async () => {
     const users = await User.insertMany([
       {
         name: 'Prof. Meera Desai',
-        email: 'meera@college.edu',
+        email: 'meera@college.in',
         passwordHash: hashedSeedPassword,
         role: 'TEACHER',
         institution: 'Global Tech University'
       },
       {
         name: 'Prof. Rohan Kulkarni',
-        email: 'rohan@college.edu',
+        email: 'rohan@college.in',
         passwordHash: hashedSeedPassword,
         role: 'TEACHER',
         institution: 'Global Tech University'
       },
       {
         name: 'Aarav Patil',
-        email: 'aarav@student.edu',
+        email: 'aarav@edu.in',
         passwordHash: hashedSeedPassword,
         role: 'STUDENT',
         institution: 'Global Tech University',
@@ -138,7 +138,7 @@ const seedData = async () => {
       },
       {
         name: 'Neha Joshi',
-        email: 'neha@student.edu',
+        email: 'neha@edu.in',
         passwordHash: hashedSeedPassword,
         role: 'STUDENT',
         institution: 'Global Tech University',
@@ -151,7 +151,7 @@ const seedData = async () => {
       },
       {
         name: 'Vikram Salunke',
-        email: 'vikram@student.edu',
+        email: 'vikram@edu.in',
         passwordHash: hashedSeedPassword,
         role: 'STUDENT',
         institution: 'Global Tech University',
@@ -162,7 +162,7 @@ const seedData = async () => {
       },
       {
         name: 'Isha Khan',
-        email: 'isha@student.edu',
+        email: 'isha@edu.in',
         passwordHash: hashedSeedPassword,
         role: 'STUDENT',
         institution: 'Global Tech University',
@@ -418,13 +418,13 @@ const seedData = async () => {
 
     console.log('\nSeed completed successfully.')
     console.log('Student login accounts (password: demo1234):')
-    console.log('- topper: aarav@student.edu')
-    console.log('- average: neha@student.edu')
-    console.log('- poor: vikram@student.edu')
-    console.log('- left-behind: isha@student.edu')
+    console.log('- topper: aarav@edu.in')
+    console.log('- average: neha@edu.in')
+    console.log('- poor: vikram@edu.in')
+    console.log('- left-behind: isha@edu.in')
     console.log('Teacher accounts (password: demo1234):')
-    console.log('- meera@college.edu')
-    console.log('- rohan@college.edu')
+    console.log('- meera@college.in')
+    console.log('- rohan@college.in')
     console.log('Note: All subject enrollments are empty to showcase the Join Subject feature.')
 
     process.exit(0)
