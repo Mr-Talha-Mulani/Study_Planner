@@ -1,41 +1,124 @@
-import { useState } from 'react'
-import { MOCK_SUBJECTS, MOCK_STUDY_PLAN } from '../utils/mockData'
-import { formatMins, formatDate, getDaysUntil } from '../utils/helpers'
+import { useEffect, useState } from 'react'
+import { formatMins, getDaysUntil } from '../utils/helpers'
 import toast from 'react-hot-toast'
 
 export default function PlannerPage() {
-  const [plan, setPlan] = useState(MOCK_STUDY_PLAN)
+  const [plan, setPlan] = useState([])
   const [generating, setGenerating] = useState(false)
-  const [selectedSubject, setSelectedSubject] = useState(MOCK_SUBJECTS[0]._id)
+  const [subjects, setSubjects] = useState([])
+  const [selectedSubject, setSelectedSubject] = useState('')
+  const [targetExamId, setTargetExamId] = useState('')
   const [dailyHours, setDailyHours] = useState(3)
   const [activeDay, setActiveDay] = useState(0)
 
-  const subjects = MOCK_SUBJECTS
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { subjectsAPI, planAPI } = await import('../api')
+        const [subRes, planRes] = await Promise.all([subjectsAPI.getAll(), planAPI.getActive()])
+        const subList = subRes.data.subjects || []
+        setSubjects(subList)
+        if (subList.length > 0) {
+          setSelectedSubject(subList[0]._id)
+          setTargetExamId(subList[0].examEvents?.[0]?._id || '')
+        }
+
+        const active = (planRes.data.plans || [])[0]
+        if (active) {
+          const { topicsAPI } = await import('../api')
+          const subId = active.subjectId._id || active.subjectId
+          
+          let progMap = {}
+          try {
+            const progRes = await topicsAPI.getProgress(subId)
+            progRes.data.progress.forEach(p => {
+              if (p.status === 'COMPLETED') progMap[p.topicId.toString()] = 'DONE'
+            })
+          } catch (e) {
+            console.error(e)
+          }
+          setTaskStatuses(progMap)
+
+          const mapped = (active.days || []).map((day) => ({
+            date: day.date,
+            topics: (day.topicIds || []).map((topic) => ({
+              topicId: topic._id,
+              topicTitle: topic.title,
+              estimatedMins: topic.estimatedMins || 30,
+              status: 'NOT_STARTED'
+            })),
+            totalMins: day.totalMins || 0
+          }))
+          setPlan(mapped)
+        }
+      } catch {
+        toast.error('Failed to load planner data')
+      }
+    }
+
+    load()
+  }, [])
 
   const generatePlan = async () => {
-    setGenerating(true)
-    await new Promise(r => setTimeout(r, 1800))
+    if (!selectedSubject) {
+      toast.error('Select a subject first')
+      return
+    }
 
-    // Mock generated plan
-    const today = new Date()
-    const newPlan = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(today)
-      date.setDate(today.getDate() + i)
-      return {
-        date: date.toISOString().split('T')[0],
-        topics: [
-          { topicId: `t${i * 2 + 3}`, topicTitle: `Generated Topic ${i * 2 + 1}`, subject: 'DSA', estimatedMins: Math.floor(45 + Math.random() * 60), status: 'NOT_STARTED' },
-          { topicId: `t${i * 2 + 4}`, topicTitle: `Generated Topic ${i * 2 + 2}`, subject: 'DBMS', estimatedMins: Math.floor(30 + Math.random() * 50), status: 'NOT_STARTED' },
-        ],
-        totalMins: Math.floor(90 + Math.random() * 90)
-      }
-    })
-    setPlan(newPlan)
-    toast.success('📅 AI Study Plan generated! 7-day schedule ready.')
-    setGenerating(false)
+    setGenerating(true)
+    try {
+      const { planAPI } = await import('../api')
+      const res = await planAPI.generate(selectedSubject, {
+        subjectId: selectedSubject,
+        dailyHours,
+        targetExamId: targetExamId || undefined
+      })
+
+      const serverPlan = res.data.plan
+      const newPlan = (serverPlan.days || []).map((day) => ({
+        date: day.date,
+        topics: (day.topicIds || []).map((topic) => ({
+          topicId: topic._id || topic,
+          topicTitle: topic.title || 'Planned topic',
+          estimatedMins: topic.estimatedMins || Math.round((day.totalMins || 0) / Math.max((day.topicIds || []).length, 1)),
+          status: 'NOT_STARTED'
+        })),
+        totalMins: day.totalMins || 0
+      }))
+      setPlan(newPlan)
+      setActiveDay(0)
+      toast.success('Study plan generated')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to generate plan')
+    } finally {
+      setGenerating(false)
+    }
   }
 
+  const [taskStatuses, setTaskStatuses] = useState({}) // { topicId: 'DONE' | 'PENDING' }
+
   const selectedDay = plan[activeDay]
+
+  const toggleTask = async (task) => {
+    const id = task.topicId || task._id
+    const currentDone = taskStatuses[id] === 'DONE'
+    const newStatus = currentDone ? 'NOT_STARTED' : 'COMPLETED'
+    
+    setTaskStatuses(prev => ({ ...prev, [id]: currentDone ? 'PENDING' : 'DONE' }))
+    if (!currentDone) toast.success(`✅ ${task.topicTitle || task.title} — done!`, { duration: 1800 })
+    
+    try {
+      const { topicsAPI } = await import('../api')
+      const { useAppStore } = await import('../store')
+      
+      // Also pass some dummy time spent since we don't track it on this UI view currently
+      await topicsAPI.updateProgress(id, newStatus, { timeSpentMins: 30 })
+      useAppStore.getState().updateTopicStatus(id, newStatus)
+    } catch {
+      setTaskStatuses(prev => ({ ...prev, [id]: currentDone ? 'DONE' : 'PENDING' }))
+      toast.error('Failed to sync progress')
+    }
+  }
 
   return (
     <div className="page-container fade-in">
@@ -83,9 +166,13 @@ export default function PlannerPage() {
 
             <div className="form-group mb-6">
               <label className="form-label">Target Exam</label>
-              <select className="form-select">
-                <option>Mid Term — in {getDaysUntil(MOCK_SUBJECTS[0].examEvents[0].date)} days</option>
-                <option>End Term — in {getDaysUntil(MOCK_SUBJECTS[0].examEvents[1].date)} days</option>
+              <select className="form-select" value={targetExamId} onChange={e => setTargetExamId(e.target.value)}>
+                <option value="">No specific exam</option>
+                {(subjects.find(s => s._id === selectedSubject)?.examEvents || []).map((exam) => (
+                  <option key={exam._id} value={exam._id}>
+                    {exam.name} - in {getDaysUntil(exam.date || exam.examDate)} days
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -173,62 +260,141 @@ export default function PlannerPage() {
               </div>
 
               {/* Day Detail */}
-              {selectedDay && (
-                <div className="card">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>
-                        {new Date(selectedDay.date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
-                      </h2>
-                      <div className="text-sm text-muted">{selectedDay.topics.length} topics · {formatMins(selectedDay.totalMins)} total</div>
-                    </div>
-                    <button
-                      className="btn btn-accent btn-sm"
-                      onClick={() => toast.success('✅ Day marked complete! Great work!')}
-                    >
-                      Mark Day Done ✓
-                    </button>
-                  </div>
+              {selectedDay && (() => {
+                const allTasks = (selectedDay.topics || selectedDay.topicIds || [])
+                const pending = allTasks.filter(t => taskStatuses[t.topicId || t._id] !== 'DONE')
+                const done = allTasks.filter(t => taskStatuses[t.topicId || t._id] === 'DONE')
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {selectedDay.topics.map((task, i) => (
-                      <div
-                        key={task.topicId}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '14px',
-                          padding: '14px 16px',
-                          background: 'var(--bg-surface2)',
-                          borderRadius: 'var(--radius-md)',
-                          border: '1px solid var(--border-subtle)',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s'
-                        }}
-                        onClick={() => toast.success(`${task.topicTitle} — marked!`)}
-                      >
-                        <div style={{
-                          width: 36, height: 36,
-                          borderRadius: '50%',
-                          background: `hsl(${i * 60 + 250}, 80%, 30%)`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontWeight: 800, fontSize: '0.9rem', color: 'white',
-                          flexShrink: 0
-                        }}>
-                          {i + 1}
+                return (
+                  <div className="card">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>
+                          {new Date(selectedDay.date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </h2>
+                        <div className="text-sm text-muted">
+                          {allTasks.length} topics · {formatMins(selectedDay.totalMins || 0)} total · {done.length}/{allTasks.length} done
                         </div>
-                        <div style={{ flex: 1 }}>
-                          <div className="text-sm font-semibold">{task.topicTitle}</div>
-                          <div className="text-xs text-muted mt-1">
-                            {task.subject} · ⏱ {formatMins(task.estimatedMins)}
-                          </div>
-                        </div>
-                        <span className={`badge ${task.status === 'COMPLETED' ? 'badge-success' : task.status === 'IN_PROGRESS' ? 'badge-warning' : 'badge-primary'}`}>
-                          {task.status === 'COMPLETED' ? '✓ Done' : task.status === 'IN_PROGRESS' ? '▶ Active' : 'Pending'}
-                        </span>
                       </div>
-                    ))}
+                      <button
+                        className="btn btn-accent btn-sm"
+                        onClick={() => {
+                          const allIds = {}
+                          allTasks.forEach(t => { allIds[t.topicId || t._id] = 'DONE' })
+                          setTaskStatuses(prev => ({ ...prev, ...allIds }))
+                          toast.success('🎯 Day complete! Great work!')
+                        }}
+                      >
+                        Mark Day Done ✓
+                      </button>
+                    </div>
+
+                    {/* Pending Tasks */}
+                    {pending.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: done.length > 0 ? '1.5rem' : 0 }}>
+                        {pending.map((task, i) => {
+                          const id = task.topicId || task._id
+                          return (
+                            <div
+                              key={id}
+                              onClick={() => toggleTask(task)}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: '14px',
+                                padding: '13px 16px',
+                                background: 'var(--bg-surface2)',
+                                borderRadius: 'var(--radius-md)',
+                                border: '1px solid var(--border-subtle)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--color-primary)'}
+                              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-subtle)'}
+                            >
+                              {/* Custom Checkbox */}
+                              <div style={{
+                                width: 22, height: 22, borderRadius: '6px', flexShrink: 0,
+                                border: '2px solid var(--border-default)',
+                                background: 'transparent',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                transition: 'all 0.15s'
+                              }} />
+                              <div style={{
+                                width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                                background: `hsl(${i * 47 + 210}, 70%, 28%)`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontWeight: 800, fontSize: '0.85rem', color: 'white'
+                              }}>
+                                {i + 1}
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{task.topicTitle || task.title || 'Planned topic'}</div>
+                                <div className="text-xs text-muted mt-1">⏱ {formatMins(task.estimatedMins || 30)}</div>
+                              </div>
+                              <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>Pending</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* Completed Tasks */}
+                    {done.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-success)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>✅</span> Completed ({done.length})
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {done.map(task => {
+                            const id = task.topicId || task._id
+                            return (
+                              <div
+                                key={id}
+                                onClick={() => toggleTask(task)}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: '14px',
+                                  padding: '11px 16px',
+                                  background: 'var(--color-success-bg, hsl(158,50%,12%))',
+                                  borderRadius: 'var(--radius-md)',
+                                  border: '1px solid hsl(158,60%,22%)',
+                                  cursor: 'pointer',
+                                  opacity: 0.75,
+                                  transition: 'all 0.15s'
+                                }}
+                              >
+                                {/* Checked box */}
+                                <div style={{
+                                  width: 22, height: 22, borderRadius: '6px', flexShrink: 0,
+                                  background: 'var(--color-success, #4ECDC4)',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  transition: 'all 0.15s'
+                                }}>
+                                  <span style={{ color: 'white', fontSize: '0.75rem', fontWeight: 800 }}>✓</span>
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{
+                                    fontSize: '0.875rem', fontWeight: 600,
+                                    textDecoration: 'line-through',
+                                    color: 'var(--text-muted)'
+                                  }}>{task.topicTitle || task.title || 'Planned topic'}</div>
+                                  <div className="text-xs" style={{ color: 'var(--color-success)', marginTop: '2px' }}>⏱ {formatMins(task.estimatedMins || 30)}</div>
+                                </div>
+                                <span className="badge" style={{ fontSize: '0.7rem', background: 'hsl(158,60%,20%)', color: 'var(--color-success, #4ECDC4)', border: '1px solid hsl(158,60%,30%)' }}>Done ✓</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {pending.length === 0 && done.length === 0 && (
+                      <div className="text-center" style={{ padding: '2rem', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: '2rem', marginBottom: '8px' }}>🎉</div>
+                        <div>No tasks for this day</div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                )
+              })()}
             </>
           ) : (
             <div className="card" style={{ textAlign: 'center', padding: '4rem' }}>

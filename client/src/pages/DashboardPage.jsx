@@ -3,26 +3,61 @@ import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store'
 import CountdownTimer from '../components/CountdownTimer'
 import PanicMeter from '../components/PanicMeter'
-import { MOCK_SUBJECTS, MOCK_GAMIFICATION, MOCK_STUDY_PLAN } from '../utils/mockData'
 import { calcSubjectProgress, getDaysUntil, formatMins, formatDate } from '../utils/helpers'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
-  const subjects = MOCK_SUBJECTS
-  const gamification = MOCK_GAMIFICATION
-  const studyPlan = MOCK_STUDY_PLAN
+  const [subjects, setSubjects] = useState([])
+  const [gamification, setGamification] = useState({ xp: 0, streak: 0, badges: [], level: 1, rank: 1, totalStudents: 1 })
+  const [studyPlan, setStudyPlan] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const { subjectsAPI, gamificationAPI, planAPI } = await import('../api')
+        const [subRes, gamRes, planRes] = await Promise.all([
+          subjectsAPI.getAll(),
+          gamificationAPI.getStats(),
+          planAPI.getActive() // if we change API to just get all active plans
+        ])
+        
+        setSubjects(subRes.data.subjects || [])
+        setGamification({ 
+          xp: gamRes.data.status?.xp || 0, 
+          streak: gamRes.data.status?.streak || 0, 
+          badges: gamRes.data.status?.badges || [],
+          level: Math.floor((gamRes.data.status?.xp || 0) / 1000) + 1,
+          rank: gamRes.data.myRank || 1,
+          totalStudents: gamRes.data.totalStudents || 1
+        })
+        setStudyPlan(planRes.data.plans || [])
+      } catch (err) {
+        console.error("Dashboard fetch error:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   // Find next upcoming exam
   const allExams = subjects.flatMap(s =>
     (s.examEvents || []).map(e => ({ ...e, subjectName: s.name, subjectId: s._id, subjectColor: s.color }))
-  ).sort((a, b) => new Date(a.date) - new Date(b.date))
+  ).sort((a, b) => new Date(a.date || a.examDate) - new Date(b.date || b.examDate))
 
   const nextExam = allExams[0]
-  const nextExamDays = nextExam ? getDaysUntil(nextExam.date) : 99
-  const nextExamSubject = nextExam ? subjects.find(s => s._id === nextExam.subjectId) : null
+  const nextExamDays = nextExam ? getDaysUntil(nextExam.date || nextExam.examDate) : 99
+  const nextExamSubject = nextExam ? subjects.find(s => s._id === (nextExam.subjectId?._id || nextExam.subjectId)) : null
   const nextExamProgress = nextExamSubject ? calcSubjectProgress(nextExamSubject) : 0
 
-  const todayPlan = studyPlan[0]
+  // Combine days from all active plans for "today"
+  const today = new Date().toDateString()
+  const todayPlan = studyPlan.flatMap(p => p.days || []).find(d => new Date(d.date).toDateString() === today) || null
+
+  if (loading) {
+    return <div className="page-container fade-in"><div className="text-center mt-20">Loading dashboard data...</div></div>
+  }
 
   // Greeting
   const hour = new Date().getHours()
@@ -64,7 +99,7 @@ export default function DashboardPage() {
           <div className="stat-icon" style={{ background: 'hsl(142,69%,48%,0.12)' }}>✅</div>
           <div>
             <div className="stat-value" style={{ background: 'var(--grad-accent)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              {subjects.reduce((acc, s) => acc + s.modules.flatMap(m => m.topics).filter(t => t.status === 'COMPLETED').length, 0)}
+              {subjects.reduce((acc, s) => acc + (s.modules || []).flatMap(m => m.topics || []).filter(t => (t.status || 'NOT_STARTED') === 'COMPLETED').length, 0)}
             </div>
             <div className="stat-label">Topics Done</div>
             <div className="stat-delta up">↑ 3 today</div>
@@ -110,7 +145,7 @@ export default function DashboardPage() {
               <div>
                 <div className="text-sm text-muted mb-2">📚 {nextExam.subjectName}</div>
                 <CountdownTimer
-                  targetDate={nextExam.date}
+                  targetDate={nextExam.date || nextExam.examDate}
                   label={nextExam.name}
                   size="sm"
                 />
@@ -128,8 +163,8 @@ export default function DashboardPage() {
           {todayPlan ? (
             <div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
-                {todayPlan.topics.map(task => (
-                  <div key={task.topicId} style={{
+                {(todayPlan.topicIds || todayPlan.topics || []).map(task => (
+                  <div key={task.topicId || task._id} style={{
                     display: 'flex', alignItems: 'center', gap: '12px',
                     padding: '10px 12px',
                     background: 'var(--bg-surface2)',
@@ -142,8 +177,8 @@ export default function DashboardPage() {
                       flexShrink: 0
                     }} />
                     <div style={{ flex: 1 }}>
-                      <div className="text-sm font-semibold">{task.topicTitle}</div>
-                      <div className="text-xs text-muted">{task.subject} · {formatMins(task.estimatedMins)}</div>
+                      <div className="text-sm font-semibold">{task.topicTitle || task.title}</div>
+                      <div className="text-xs text-muted">{task.subject || 'Topic'} · {formatMins(task.estimatedMins || 30)}</div>
                     </div>
                     {task.status === 'IN_PROGRESS' && (
                       <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>In Progress</span>
@@ -152,7 +187,7 @@ export default function DashboardPage() {
                 ))}
               </div>
               <div className="text-xs text-muted">
-                Total: {formatMins(todayPlan.totalMins)} planned today
+                Total: {formatMins(todayPlan.totalMins || 0)} planned today
               </div>
             </div>
           ) : (
@@ -173,7 +208,7 @@ export default function DashboardPage() {
         {subjects.map(subject => {
           const progress = calcSubjectProgress(subject)
           const nextSubjectExam = subject.examEvents?.[0]
-          const daysLeft = nextSubjectExam ? getDaysUntil(nextSubjectExam.date) : null
+          const daysLeft = nextSubjectExam ? getDaysUntil(nextSubjectExam.date || nextSubjectExam.examDate) : null
 
           return (
             <Link
@@ -276,7 +311,7 @@ export default function DashboardPage() {
       <div className="section-title">📆 Upcoming Exams</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {allExams.slice(0, 5).map((exam, idx) => {
-          const days = getDaysUntil(exam.date)
+          const days = getDaysUntil(exam.date || exam.examDate)
           const isUrgent = days <= 7
 
           return (
@@ -291,7 +326,7 @@ export default function DashboardPage() {
                   }} />
                   <div>
                     <div className="text-sm font-semibold">{exam.subjectName}</div>
-                    <div className="text-xs text-muted">{exam.name} · {formatDate(exam.date)}</div>
+                    <div className="text-xs text-muted">{exam.name} · {formatDate(exam.date || exam.examDate)}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

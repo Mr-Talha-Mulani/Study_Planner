@@ -3,6 +3,7 @@ import { useAuthStore } from '../store'
 
 const api = axios.create({
   baseURL: '/api',
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json' }
 })
 
@@ -49,20 +50,21 @@ export const subjectsAPI = {
 
 // Topics
 export const topicsAPI = {
-  updateProgress: (topicId, status) => api.put(`/topics/${topicId}/progress`, { status }),
+  updateProgress: (topicId, status, extras = {}) => api.put(`/topics/${topicId}/progress`, { status, ...extras }),
   getProgress: (subjectId) => api.get(`/topics/progress/${subjectId}`),
 }
 
 // Study Plan
 export const planAPI = {
-  generate: (subjectId, data) => api.post(`/plan/generate/${subjectId}`, data),
-  getActive: (subjectId) => api.get(`/plan/${subjectId}`),
+  generate: (subjectId, data) => api.post('/plan/generate', { ...data, subjectId }),
+  getActive: () => api.get(`/plan`),
   getToday: () => api.get('/plan/today'),
 }
 
 // AI
 export const aiAPI = {
   chat: (data) => api.post('/ai/chat', data),
+  getHistory: (subjectId) => api.get(`/ai/history/${subjectId}`),
   summarizeTopic: (topicId, level) => api.post(`/ai/summarize/${topicId}`, { level }),
   generatePlan: (data) => api.post('/ai/generate-plan', data),
   lastNight: (data) => api.post('/ai/last-night', data),
@@ -74,8 +76,8 @@ export const aiAPI = {
 
 // Gamification
 export const gamificationAPI = {
-  getStats: () => api.get('/gamification/stats'),
-  getLeaderboard: (subjectId) => api.get(`/gamification/leaderboard/${subjectId}`),
+  getStats: () => api.get('/gamification/status'),
+  getLeaderboard: () => api.get('/gamification/leaderboard'),
   getBadges: () => api.get('/gamification/badges'),
 }
 
@@ -83,21 +85,23 @@ export const gamificationAPI = {
 export const groupsAPI = {
   getAll: () => api.get('/groups'),
   create: (data) => api.post('/groups', data),
-  join: (id) => api.post(`/groups/${id}/join`),
-  getMessages: (id) => api.get(`/groups/${id}/messages`),
+  join: (id) => api.put(`/groups/${id}/join`),
+  getOne: (id) => api.get(`/groups/${id}`),
+  sendMessage: (id, text) => api.post(`/groups/${id}/message`, { text }),
 }
 
 // Materials
 export const materialsAPI = {
   getAll: (subjectId) => api.get(`/materials/${subjectId}`),
-  upload: (subjectId, formData) => api.post(`/materials/${subjectId}`, formData, {
+  upload: (formData) => api.post(`/materials/upload`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
+  getMyUploads: () => api.get('/materials/user/my-uploads'),
 }
 
 // Analytics
 export const analyticsAPI = {
-  getStudentDashboard: () => api.get('/analytics/student'),
+  getStudentDashboard: () => api.get('/analytics'),
   getTeacherDashboard: (subjectId) => api.get(`/analytics/teacher/${subjectId}`),
 }
 

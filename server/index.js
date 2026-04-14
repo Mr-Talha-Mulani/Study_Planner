@@ -10,13 +10,29 @@ dotenv.config({ path: '../.env' })
 const app = express()
 const server = http.createServer(app)
 
+const configuredOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173,http://localhost:5174')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true
+  if (configuredOrigins.includes(origin)) return true
+  return /^http:\/\/localhost:\d+$/.test(origin)
+}
+
+const corsOrigin = (origin, callback) => {
+  if (isAllowedOrigin(origin)) return callback(null, true)
+  return callback(new Error('Not allowed by CORS'))
+}
+
 // Socket.io setup
 const io = new Server(server, {
-  cors: { origin: 'http://localhost:5173', methods: ['GET', 'POST'] }
+  cors: { origin: corsOrigin, methods: ['GET', 'POST'], credentials: true }
 })
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }))
+app.use(cors({ origin: corsOrigin, credentials: true }))
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
@@ -76,9 +92,13 @@ io.on('connection', (socket) => {
 
 // MongoDB connection & server start
 const PORT = process.env.PORT || 5000
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/studyplanner'
+const MONGO_URI = process.env.MONGO_URI
 
-mongoose.connect(MONGO_URI)
+if (!MONGO_URI) {
+  throw new Error('MONGO_URI is not defined in environment variables')
+}
+
+mongoose.connect(MONGO_URI, { serverSelectionTimeoutMS: 10000 })
   .then(() => {
     console.log('✅ MongoDB connected')
     server.listen(PORT, () => {
@@ -87,11 +107,7 @@ mongoose.connect(MONGO_URI)
   })
   .catch(err => {
     console.error('❌ MongoDB connection failed:', err.message)
-    console.log('💡 Make sure MongoDB is running or update MONGO_URI in .env')
-    // Start server anyway for development without DB
-    server.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT} (no DB connection)`)
-    })
+    process.exit(1)
   })
 
 module.exports = { app, io }

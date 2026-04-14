@@ -12,16 +12,18 @@ export const formatTime = (date) => {
 }
 
 export const getDaysUntil = (date) => {
-  const now = new Date()
+  if (!date) return null
   const target = new Date(date)
-  const diff = target - now
+  if (isNaN(target.getTime())) return null
+  const diff = target - new Date()
   return Math.ceil(diff / (1000 * 60 * 60 * 24))
 }
 
 export const getCountdown = (date) => {
-  const now = new Date()
+  if (!date) return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true, invalid: true }
   const target = new Date(date)
-  const diff = target - now
+  if (isNaN(target.getTime())) return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true, invalid: true }
+  const diff = target - new Date()
 
   if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true }
 

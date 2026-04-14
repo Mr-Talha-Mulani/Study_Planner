@@ -11,6 +11,14 @@ export default function CountdownTimer({ targetDate, label = 'Exam', size = 'md'
     return () => clearInterval(interval)
   }, [targetDate])
 
+  if (countdown.expired && countdown.invalid) {
+    return (
+      <div className="text-center" style={{ color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: '0.85rem' }}>📅 No exam date set</div>
+      </div>
+    )
+  }
+
   if (countdown.expired) {
     return (
       <div className="text-center">

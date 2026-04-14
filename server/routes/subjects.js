@@ -17,12 +17,25 @@ router.get('/', authMiddleware, async (req, res) => {
         .populate('teacherId', 'name')
     }
 
+    // Get all progress for this user once to avoid N+1 queries
+    const userProgress = req.user.role === 'STUDENT' ? 
+      await TopicProgress.find({ studentId: req.user.id }) : []
+    
+    const progressMap = {}
+    userProgress.forEach(p => {
+      progressMap[p.topicId.toString()] = p.status
+    })
+
     // Attach modules and topics for each subject
     const enriched = await Promise.all(subjects.map(async (sub) => {
       const modules = await Module.find({ subjectId: sub._id }).sort('order')
       const modulesWithTopics = await Promise.all(modules.map(async (mod) => {
         const topics = await Topic.find({ moduleId: mod._id }).sort('order')
-        return { ...mod.toObject(), topics }
+        const topicsWithStatus = topics.map(t => {
+          const status = progressMap[t._id.toString()] || 'NOT_STARTED'
+          return { ...t.toObject(), status }
+        })
+        return { ...mod.toObject(), topics: topicsWithStatus }
       }))
       const examEvents = await ExamEvent.find({ subjectId: sub._id }).sort('examDate')
       return { ...sub.toObject(), modules: modulesWithTopics, examEvents }
@@ -53,7 +66,13 @@ router.post('/join', authMiddleware, async (req, res) => {
 router.post('/', authMiddleware, teacherOnly, async (req, res) => {
   try {
     const { name, semester, examType, description, color } = req.body
-    const code = name.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) + Math.floor(100 + Math.random() * 900)
+    let isUnique = false;
+    let code = '';
+    while (!isUnique) {
+      code = name.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) + Math.floor(100 + Math.random() * 900)
+      const existing = await Subject.findOne({ code })
+      if (!existing) isUnique = true;
+    }
     const subject = new Subject({ name, code, teacherId: req.user.id, semester, examType, description, color })
     await subject.save()
     res.status(201).json({ subject })
@@ -67,11 +86,26 @@ router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const subject = await Subject.findById(req.params.id).populate('teacherId', 'name email')
     if (!subject) return res.status(404).json({ error: 'Subject not found' })
+    
+    // Get user progress
+    const userProgress = req.user.role === 'STUDENT' ? 
+      await TopicProgress.find({ studentId: req.user.id, subjectId: subject._id }) : []
+    
+    const progressMap = {}
+    userProgress.forEach(p => {
+      progressMap[p.topicId.toString()] = p.status
+    })
+
     const modules = await Module.find({ subjectId: subject._id }).sort('order')
     const modulesWithTopics = await Promise.all(modules.map(async (mod) => {
       const topics = await Topic.find({ moduleId: mod._id }).sort('order')
-      return { ...mod.toObject(), topics }
+      const topicsWithStatus = topics.map(t => ({
+        ...t.toObject(),
+        status: progressMap[t._id.toString()] || 'NOT_STARTED'
+      }))
+      return { ...mod.toObject(), topics: topicsWithStatus }
     }))
+
     const examEvents = await ExamEvent.find({ subjectId: subject._id }).sort('examDate')
     res.json({ subject: { ...subject.toObject(), modules: modulesWithTopics, examEvents } })
   } catch (err) {

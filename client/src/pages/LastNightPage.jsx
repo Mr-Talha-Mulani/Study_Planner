@@ -1,25 +1,47 @@
-import { useState } from 'react'
-import { MOCK_SUBJECTS } from '../utils/mockData'
-import { getLastNightTopics, formatMins, difficultyClass, difficultyLabel } from '../utils/helpers'
+import { useEffect, useState } from 'react'
+import { formatMins, difficultyClass, difficultyLabel } from '../utils/helpers'
 import toast from 'react-hot-toast'
 
 export default function LastNightPage() {
   const [hours, setHours] = useState(4)
-  const [subjects, setSubjects] = useState(MOCK_SUBJECTS.map(s => s._id))
+  const [subjects, setSubjects] = useState([])
+  const [allSubjects, setAllSubjects] = useState([])
   const [plan, setPlan] = useState(null)
   const [loading, setLoading] = useState(false)
   const [completedTopics, setCompletedTopics] = useState(new Set())
 
-  const allSubjects = MOCK_SUBJECTS
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { subjectsAPI } = await import('../api')
+        const res = await subjectsAPI.getAll()
+        const subList = res.data.subjects || []
+        setAllSubjects(subList)
+        setSubjects(subList.map(s => s._id))
+      } catch {
+        toast.error('Failed to load subjects')
+      }
+    }
+    load()
+  }, [])
 
   const generatePlan = async () => {
     setLoading(true)
-    await new Promise(r => setTimeout(r, 1500))
-    const selectedSubjects = allSubjects.filter(s => subjects.includes(s._id))
-    const topics = getLastNightTopics(selectedSubjects, hours)
-    setPlan(topics)
-    setLoading(false)
-    toast.success('🌙 Last-Night plan ready! Focus mode activated.')
+    try {
+      const { aiAPI } = await import('../api')
+      const res = await aiAPI.lastNight({ subjectIds: subjects, hours })
+      const subjectMap = Object.fromEntries(allSubjects.map(s => [s._id, s.name]))
+      const mapped = (res.data.plan || []).map((topic) => ({
+        ...topic,
+        subjectName: subjectMap[topic.subjectId] || 'Subject'
+      }))
+      setPlan(mapped)
+      toast.success('Last-night plan ready')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to generate plan')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const toggleComplete = (topicId) => {

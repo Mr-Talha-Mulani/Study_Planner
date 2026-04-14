@@ -1,22 +1,49 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { difficultyClass, difficultyLabel, formatMins } from '../utils/helpers'
+import { useAppStore } from '../store'
 
 export default function TopicList({ topics = [], onMarkComplete, canEdit = false }) {
+  const updateTopicStatus = useAppStore(s => s.updateTopicStatus)
   const [localTopics, setLocalTopics] = useState(topics)
+  const [saving, setSaving] = useState(null)
 
-  const handleToggle = (topicId) => {
+  useEffect(() => {
+    setLocalTopics(topics)
+  }, [topics])
+
+  const handleToggle = async (topicId) => {
+    // Optimistically update UI first
+    let newStatus = 'NOT_STARTED'
     setLocalTopics(prev => prev.map(t => {
       if (t._id === topicId) {
-        const newStatus = t.status === 'COMPLETED' ? 'NOT_STARTED' : 'COMPLETED'
-        if (newStatus === 'COMPLETED') {
-          toast.success('🎉 Topic marked complete! +10 XP', { duration: 2000 })
-        }
-        onMarkComplete?.(topicId, newStatus)
+        newStatus = t.status === 'COMPLETED' ? 'NOT_STARTED' : 'COMPLETED'
         return { ...t, status: newStatus }
       }
       return t
     }))
+    
+    // Sync to global store immediately for reactivity across components
+    updateTopicStatus(topicId, newStatus)
+    onMarkComplete?.(topicId, newStatus)  // Optimistic update for parent UI
+
+    if (newStatus === 'COMPLETED') toast.success('🎉 Topic marked complete! +10 XP', { duration: 2000 })
+
+    // Persist to backend
+    setSaving(topicId)
+    try {
+      const { topicsAPI } = await import('../api')
+      await topicsAPI.updateProgress(topicId, newStatus)
+    } catch {
+      // Revert UI on failure
+      const revertStatus = newStatus === 'COMPLETED' ? 'NOT_STARTED' : 'COMPLETED'
+      setLocalTopics(prev => prev.map(t => t._id === topicId ? { ...t, status: revertStatus } : t))
+      updateTopicStatus(topicId, revertStatus)
+      onMarkComplete?.(topicId, revertStatus) // Revert parent UI 
+      toast.error('Failed to save. Try again.')
+    } finally {
+      setSaving(null)
+    }
   }
 
   return (
@@ -29,13 +56,17 @@ export default function TopicList({ topics = [], onMarkComplete, canEdit = false
           style={{ animationDelay: `${idx * 0.05}s` }}
         >
           {/* Checkbox */}
-          <div className={`topic-checkbox ${topic.status === 'COMPLETED' ? 'checked' : ''}`}>
-            {topic.status === 'COMPLETED' && (
+          <div
+            className={`topic-checkbox ${topic.status === 'COMPLETED' ? 'checked' : ''}`}
+            style={{ opacity: saving === topic._id ? 0.5 : 1, transition: 'opacity 0.2s' }}
+          >
+            {saving === topic._id ? (
+              <span style={{ color: 'var(--color-primary)', fontSize: '0.7rem' }}>⟳</span>
+            ) : topic.status === 'COMPLETED' ? (
               <span style={{ color: 'white', fontSize: '0.75rem', fontWeight: 700 }}>✓</span>
-            )}
-            {topic.status === 'IN_PROGRESS' && (
+            ) : topic.status === 'IN_PROGRESS' ? (
               <span style={{ color: 'var(--color-warning)', fontSize: '0.7rem' }}>◐</span>
-            )}
+            ) : null}
           </div>
 
           {/* Topic info */}

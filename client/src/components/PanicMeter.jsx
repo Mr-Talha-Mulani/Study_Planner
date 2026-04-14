@@ -1,8 +1,11 @@
 import { calcPanicLevel } from '../utils/helpers'
 
 export default function PanicMeter({ daysUntilExam, completionPercent, examName = 'Exam' }) {
-  const panic = calcPanicLevel(daysUntilExam, completionPercent)
-  
+  // Guard against invalid inputs
+  const safeDays = (daysUntilExam === null || daysUntilExam === undefined || isNaN(daysUntilExam)) ? 999 : daysUntilExam
+  const safePct = (completionPercent === null || completionPercent === undefined || isNaN(completionPercent)) ? 0 : completionPercent
+  const panic = calcPanicLevel(safeDays, safePct)
+  const noExamSet = daysUntilExam === null || daysUntilExam === undefined
   const arcRadius = 80
   const arcStroke = 12
   const circumference = Math.PI * arcRadius // Half circle
@@ -73,9 +76,15 @@ export default function PanicMeter({ daysUntilExam, completionPercent, examName 
       {/* Details */}
       <div className="text-center">
         <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{daysUntilExam}</span> days to {examName}
+          {noExamSet ? (
+            <span style={{ color: 'var(--text-muted)' }}>No exam date set</span>
+          ) : (
+            <>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{daysUntilExam}</span> days to {examName}
+            </>
+          )}
           <span style={{ margin: '0 8px', color: 'var(--text-muted)' }}>•</span>
-          <span style={{ color: 'var(--color-accent-light)', fontWeight: 600 }}>{completionPercent}%</span> done
+          <span style={{ color: 'var(--color-accent-light)', fontWeight: 600 }}>{safePct}%</span> done
         </div>
       </div>
     </div>

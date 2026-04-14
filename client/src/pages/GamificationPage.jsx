@@ -1,14 +1,51 @@
-import { useState } from 'react'
-import { MOCK_GAMIFICATION, MOCK_LEADERBOARD, MOCK_SUBJECTS } from '../utils/mockData'
+import { useEffect, useState } from 'react'
 import { calcLevel } from '../utils/helpers'
-import { useAuthStore } from '../store'
 
 export default function GamificationPage() {
-  const { user } = useAuthStore()
-  const gamification = MOCK_GAMIFICATION
-  const leaderboard = MOCK_LEADERBOARD
-  const subjects = MOCK_SUBJECTS
+  const [gamification, setGamification] = useState({ xp: 0, streak: 0, badges: [], rank: 0, totalStudents: 1, todayDone: false })
+  const [leaderboard, setLeaderboard] = useState([])
+  const [subjects, setSubjects] = useState([])
   const [activeTab, setActiveTab] = useState('overview')
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { gamificationAPI, subjectsAPI } = await import('../api')
+        const [statusRes, boardRes, subjectsRes] = await Promise.all([
+          gamificationAPI.getStats(),
+          gamificationAPI.getLeaderboard(),
+          subjectsAPI.getAll()
+        ])
+
+        const status = statusRes.data.status || {}
+        const board = boardRes.data.leaderboard || []
+        setGamification({
+          xp: status.xp || 0,
+          streak: status.streak || 0,
+          badges: status.badges || [],
+          rank: boardRes.data.myRank || 0,
+          totalStudents: board.length || 1,
+          todayDone: !!status.lastStudyDate && new Date(status.lastStudyDate).toDateString() === new Date().toDateString()
+        })
+
+        setLeaderboard(
+          board.map((entry, index) => ({
+            studentId: entry._id,
+            rank: index + 1,
+            name: entry.name,
+            xp: entry.xp,
+            streak: entry.streak,
+            isMe: (index + 1) === (boardRes.data.myRank || -1),
+            color: 'hsl(250,84%,62%)'
+          }))
+        )
+        setSubjects(subjectsRes.data.subjects || [])
+      } catch {
+        // keep safe defaults
+      }
+    }
+    load()
+  }, [])
 
   const levelInfo = calcLevel(gamification.xp)
 
@@ -87,13 +124,13 @@ export default function GamificationPage() {
           {/* Recent Badges */}
           <div className="section-title mb-4">🏅 Recently Earned</div>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-            {gamification.badges.filter(b => b.earned).map(badge => (
+            {gamification.badges.map((badge, idx) => (
               <div key={badge.id} className="card card-accent flex items-center gap-3" style={{ padding: '12px 16px', minWidth: 0 }}>
-                <span style={{ fontSize: '1.8rem' }}>{badge.icon}</span>
+                <span style={{ fontSize: '1.8rem' }}>{badge.badge || '🏅'}</span>
                 <div>
-                  <div className="text-sm font-bold">{badge.name}</div>
-                  <div className="text-xs text-muted">{badge.description}</div>
-                  <div className="text-xs mt-1" style={{ color: 'hsl(38,92%,65%)' }}>+{badge.xp} XP</div>
+                  <div className="text-sm font-bold">Badge #{idx + 1}</div>
+                  <div className="text-xs text-muted">Achievement unlocked</div>
+                  <div className="text-xs mt-1" style={{ color: 'hsl(38,92%,65%)' }}>+{badge.xp || 0} XP</div>
                 </div>
               </div>
             ))}
@@ -103,9 +140,9 @@ export default function GamificationPage() {
           <div className="section-title mb-4">📚 Progress by Subject</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {subjects.map(sub => {
-              const topics = sub.modules.flatMap(m => m.topics)
-              const done = topics.filter(t => t.status === 'COMPLETED').length
-              const pct = Math.round((done / topics.length) * 100)
+              const topics = (sub.modules || []).flatMap(m => m.topics || [])
+              const done = topics.filter(t => (t.status || 'NOT_STARTED') === 'COMPLETED').length
+              const pct = topics.length ? Math.round((done / topics.length) * 100) : 0
               return (
                 <div key={sub._id} className="card" style={{ padding: '14px 16px' }}>
                   <div className="flex items-center gap-4">
@@ -132,23 +169,15 @@ export default function GamificationPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
             {gamification.badges.map(badge => (
               <div
-                key={badge.id}
-                className={`card badge-card ${badge.earned ? 'card-accent' : ''}`}
-                style={{ opacity: badge.earned ? 1 : 0.5 }}
+                key={`${badge.badge}-${badge.earnedAt}`}
+                className="card badge-card card-accent"
               >
                 <div style={{ position: 'relative', display: 'inline-block' }}>
-                  <span className="badge-icon">{badge.icon}</span>
-                  {!badge.earned && (
-                    <span style={{ position: 'absolute', top: -4, right: -4, fontSize: '1rem' }}>🔒</span>
-                  )}
+                  <span className="badge-icon">{badge.badge || '🏅'}</span>
                 </div>
-                <div className="font-bold text-sm">{badge.name}</div>
-                <div className="text-xs text-muted text-center">{badge.description}</div>
-                {badge.earned ? (
-                  <span className="badge badge-success">+{badge.xp} XP earned</span>
-                ) : (
-                  <span className="badge badge-primary">{badge.xp} XP reward</span>
-                )}
+                <div className="font-bold text-sm">Achievement</div>
+                <div className="text-xs text-muted text-center">Earned at {new Date(badge.earnedAt).toLocaleDateString()}</div>
+                <span className="badge badge-success">+{badge.xp || 0} XP earned</span>
               </div>
             ))}
           </div>

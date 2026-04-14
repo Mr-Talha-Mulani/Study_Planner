@@ -1,74 +1,88 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuthStore } from '../store'
-import { MOCK_SUBJECTS, MOCK_AI_MESSAGES } from '../utils/mockData'
 import toast from 'react-hot-toast'
-
-const AI_RESPONSES = {
-  default: [
-    "Great question! Let me explain that concept clearly...",
-    "Based on your syllabus, here's what you need to know:",
-    "This is a commonly tested topic. Here's a concise explanation:",
-    "Let me break this down into simple steps for you:",
-  ],
-  summary: "Here's a quick summary of the topic. The key points to remember are: (1) Core concept definition, (2) How it's applied in practice, (3) Common exam questions around this topic. Would you like me to go deeper on any of these?",
-  quiz: "Let's test your understanding! Here's a quick question: Which of the following best describes the concept? (A) Option A, (B) Option B, (C) Option C, (D) Option D. Type the letter of your answer!",
-  explain: "Sure! Think of it like this — imagine you're organizing files in a folder. The data structure works similarly by... The formal definition is: a collection of elements where each element has a value and a pointer to the next. Does that make sense?",
-}
-
-function mockAIResponse(message) {
-  const lower = message.toLowerCase()
-  if (lower.includes('summar') || lower.includes('brief')) return AI_RESPONSES.summary
-  if (lower.includes('quiz') || lower.includes('test me') || lower.includes('question')) return AI_RESPONSES.quiz
-  if (lower.includes('explain') || lower.includes('what is') || lower.includes('how does')) return AI_RESPONSES.explain
-  return AI_RESPONSES.default[Math.floor(Math.random() * AI_RESPONSES.default.length)] +
-    ` "${message.slice(0, 50)}..." is indeed important for your mid-term. Focus on the core principles and practice with examples from your notes.`
-}
 
 export default function AITutorPage() {
   const { user } = useAuthStore()
-  const [messages, setMessages] = useState(MOCK_AI_MESSAGES)
+  const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [selectedTopic, setSelectedTopic] = useState('')
   const [selectedSubject, setSelectedSubject] = useState('')
   const messagesEndRef = useRef(null)
 
-  const subjects = MOCK_SUBJECTS
-  const allTopics = subjects.flatMap(s =>
-    s.modules.flatMap(m => m.topics.map(t => ({ ...t, subjectName: s.name, subjectId: s._id })))
-  )
+  const [subjects, setSubjects] = useState([])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const sendMessage = async (e) => {
+  useEffect(() => {
+    import('../api').then(({ subjectsAPI, aiAPI }) => {
+      subjectsAPI.getAll().then(res => {
+        setSubjects(res.data.subjects || [])
+      }).catch(console.error)
+      
+      if (selectedSubject) {
+        aiAPI.getHistory(selectedSubject).then(res => {
+          if (res.data.history?.length) {
+            setMessages(
+              res.data.history.map((m, index) => ({
+                id: index + 1,
+                role: m.role,
+                content: m.content,
+                timestamp: m.timestamp || new Date().toISOString()
+              }))
+            )
+          }
+        }).catch(console.error)
+      }
+    })
+  }, [selectedSubject])
+
+  const allTopics = subjects.flatMap(s =>
+    s.modules?.flatMap(m => m.topics?.map(t => ({ ...t, subjectName: s.name, subjectId: s._id })) || []) || []
+  )
+
+  const sendMessage = async (e, promptText = null) => {
     e?.preventDefault()
-    if (!input.trim() && !selectedTopic) return
+    
+    // We can accept promptText directly from Quick Prompts, or from the input box
+    const textToSend = promptText || input || (selectedTopic ? `Explain: ${allTopics.find(t => t._id === selectedTopic)?.title}` : '')
+    if (!textToSend.trim()) return
 
     const userMsg = {
       id: Date.now(),
       role: 'user',
-      content: input || `Explain: ${allTopics.find(t => t._id === selectedTopic)?.title}`,
+      content: textToSend,
       timestamp: new Date().toISOString()
     }
 
     setMessages(prev => [...prev, userMsg])
-    setInput('')
+    if (!promptText) setInput('') // only clear input if we didn't use a quick prompt
     setLoading(true)
 
-    // Simulate AI response delay
-    await new Promise(r => setTimeout(r, 1200 + Math.random() * 800))
+    try {
+      const { aiAPI } = await import('../api')
+      const res = await aiAPI.chat({
+        message: textToSend,
+        topicId: selectedTopic || undefined,
+        subjectId: selectedSubject || undefined
+      })
 
-    const aiMsg = {
-      id: Date.now() + 1,
-      role: 'ai',
-      content: mockAIResponse(userMsg.content),
-      timestamp: new Date().toISOString()
+      const aiMsg = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: res.data.response,
+        timestamp: new Date().toISOString()
+      }
+      setMessages(prev => [...prev, aiMsg])
+    } catch (err) {
+      toast.error('AI is resting. Try again soon!')
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-
-    setMessages(prev => [...prev, aiMsg])
-    setLoading(false)
   }
 
   const quickPrompts = [
@@ -116,7 +130,7 @@ export default function AITutorPage() {
           <div className="chat-messages">
             {messages.map(msg => (
               <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: '4px' }}>
-                {msg.role === 'ai' && (
+                {msg.role !== 'user' && (
                   <div className="flex items-center gap-2 mb-1" style={{ marginLeft: '4px' }}>
                     <div style={{
                       width: 28, height: 28,
@@ -128,7 +142,7 @@ export default function AITutorPage() {
                     <span className="text-xs text-muted">AI Study Assistant</span>
                   </div>
                 )}
-                <div className={`chat-bubble ${msg.role}`}>
+                <div className={`chat-bubble ${msg.role === 'user' ? 'user' : 'ai'}`}>
                   {msg.content}
                 </div>
                 <div className="text-xs text-muted" style={{ padding: '0 4px' }}>
@@ -185,7 +199,7 @@ export default function AITutorPage() {
                   key={i}
                   className="btn btn-outline btn-sm"
                   style={{ textAlign: 'left', justifyContent: 'flex-start', fontSize: '0.8rem' }}
-                  onClick={() => { setInput(prompt.msg); sendMessage() }}
+                  onClick={(e) => sendMessage(e, prompt.msg)}
                 >
                   {prompt.label}
                 </button>
@@ -230,7 +244,7 @@ export default function AITutorPage() {
           {/* Clear chat */}
           <button
             className="btn btn-outline btn-sm"
-            onClick={() => { setMessages(MOCK_AI_MESSAGES); toast.success('Chat cleared') }}
+            onClick={() => { setMessages([]); toast.success('Chat cleared') }}
           >
             🗑️ Clear Chat
           </button>

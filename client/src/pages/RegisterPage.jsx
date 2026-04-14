@@ -17,23 +17,20 @@ export default function RegisterPage() {
     }
     setLoading(true)
 
-    // Phase 1: Mock register
-    await new Promise(r => setTimeout(r, 1000))
-
-    const user = {
-      _id: 'user-' + Date.now(),
-      name: form.name,
-      email: form.email,
-      role: form.role,
-      institution: form.institution,
-      createdAt: new Date().toISOString()
+    try {
+      const { authAPI } = await import('../api')
+      const response = await authAPI.register(form)
+      
+      const { user, token } = response.data
+      setAuth(user, token)
+      
+      toast.success(`Welcome to Smart Study Planner, ${form.name.split(' ')[0]}! 🎉`)
+      navigate(user.role === 'TEACHER' ? '/teacher/dashboard' : '/dashboard')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Registration failed')
+    } finally {
+      setLoading(false)
     }
-
-    setAuth(user, 'mock-token-' + Date.now())
-    toast.success(`Welcome to Smart Study Planner, ${form.name.split(' ')[0]}! 🎉`)
-
-    navigate(form.role === 'TEACHER' ? '/teacher/dashboard' : '/dashboard')
-    setLoading(false)
   }
 
   return (

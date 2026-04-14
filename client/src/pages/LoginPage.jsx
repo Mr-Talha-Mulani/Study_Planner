@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store'
 import toast from 'react-hot-toast'
-import { MOCK_USER_STUDENT, MOCK_USER_TEACHER } from '../utils/mockData'
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '', role: 'STUDENT' })
@@ -14,28 +13,26 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
 
-    // Phase 1: Mock login (Phase 2 replaces with real API)
-    await new Promise(r => setTimeout(r, 900))
+    try {
+      // Connect to real backend API
+      const { authAPI } = await import('../api')
+      const response = await authAPI.login({ email: form.email, password: form.password })
+      
+      const { user, token } = response.data
+      setAuth(user, token)
 
-    const user = form.role === 'TEACHER' ? MOCK_USER_TEACHER : MOCK_USER_STUDENT
-    setAuth({ ...user, role: form.role }, 'mock-token-' + Date.now())
+      toast.success(`Welcome back, ${user.name.split(' ')[0]}! 👋`)
 
-    toast.success(`Welcome back, ${user.name.split(' ')[0]}! 👋`)
-
-    if (form.role === 'TEACHER') {
-      navigate('/teacher/dashboard')
-    } else {
-      navigate('/dashboard')
+      if (user.role === 'TEACHER') {
+        navigate('/teacher/dashboard')
+      } else {
+        navigate('/dashboard')
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Login failed')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
-  }
-
-  const demoLogin = (role) => {
-    setForm({
-      email: role === 'TEACHER' ? 'meera@college.edu' : 'arjun@college.edu',
-      password: 'demo1234',
-      role
-    })
   }
 
   return (
@@ -121,33 +118,6 @@ export default function LoginPage() {
             ) : 'Sign In 🚀'}
           </button>
         </form>
-
-        {/* Demo Accounts */}
-        <div style={{ marginTop: '1.5rem', padding: '1rem', background: 'var(--bg-surface2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
-          <div className="text-xs text-muted text-center" style={{ marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
-            🎯 Demo Accounts
-          </div>
-          <div className="flex gap-2">
-            <button
-              id="demo-student"
-              className="btn btn-outline btn-sm"
-              style={{ flex: 1, fontSize: '0.75rem' }}
-              onClick={() => demoLogin('STUDENT')}
-              type="button"
-            >
-              🎓 Student Demo
-            </button>
-            <button
-              id="demo-teacher"
-              className="btn btn-outline btn-sm"
-              style={{ flex: 1, fontSize: '0.75rem' }}
-              onClick={() => demoLogin('TEACHER')}
-              type="button"
-            >
-              👩‍🏫 Teacher Demo
-            </button>
-          </div>
-        </div>
 
         <div className="text-center" style={{ marginTop: '1.5rem' }}>
           <span className="text-muted text-sm">Don't have an account? </span>

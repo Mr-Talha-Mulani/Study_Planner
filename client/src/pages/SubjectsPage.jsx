@@ -1,7 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { MOCK_SUBJECTS } from '../utils/mockData'
-import { calcSubjectProgress, getDaysUntil, difficultyLabel, difficultyClass, formatMins, getTopicsForExam } from '../utils/helpers'
+import { calcSubjectProgress, getDaysUntil } from '../utils/helpers'
 import TopicList from '../components/TopicList'
 import CountdownTimer from '../components/CountdownTimer'
 import PanicMeter from '../components/PanicMeter'
@@ -12,17 +11,71 @@ export default function SubjectsPage() {
   const [activeTab, setActiveTab] = useState('MID')
   const [joinCode, setJoinCode] = useState('')
   const [showJoin, setShowJoin] = useState(false)
+  
+  const [subjects, setSubjects] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const subjects = MOCK_SUBJECTS
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const { subjectsAPI } = await import('../api')
+        const res = await subjectsAPI.getAll()
+        // the id route could also fetch specific subject details `subjectsAPI.getOne(id)` 
+        // but for now, we have enough nested inside `subjects` if the backend returns it all.
+        setSubjects(res.data.subjects || [])
+      } catch (err) {
+        toast.error('Failed to load subjects')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchSubjects()
+  }, [])
+
+  if (loading) return <div className="page-container"><div className="text-center mt-20 fade-in">Loading subjects...</div></div>
+
+  const handleJoin = async () => {
+    if (joinCode.length < 3) {
+      toast.error('Enter a valid code')
+      return
+    }
+    try {
+      const { subjectsAPI } = await import('../api')
+      const res = await subjectsAPI.join(joinCode)
+      setSubjects(prev => [...prev, res.data.subject])
+      toast.success(`Joined subject successfully! 🎉`)
+      setShowJoin(false)
+      setJoinCode('')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to join subject')
+    }
+  }
 
   if (id) {
     // Subject detail view
     const subject = subjects.find(s => s._id === id)
     if (!subject) return <div className="page-container">Subject not found</div>
 
+    const handleMarkComplete = (topicId, newStatus) => {
+      setSubjects(prevSubjects => prevSubjects.map(sub => {
+        if (sub._id === id) {
+          return {
+            ...sub,
+            modules: sub.modules.map(mod => ({
+              ...mod,
+              topics: mod.topics.map(topic => 
+                topic._id === topicId ? { ...topic, status: newStatus } : topic
+              )
+            }))
+          }
+        }
+        return sub;
+      }))
+    }
+
     const progress = calcSubjectProgress(subject)
     const nextExam = subject.examEvents?.[0]
-    const daysLeft = nextExam ? getDaysUntil(nextExam.date) : null
+    const daysLeft = nextExam ? getDaysUntil(nextExam.examDate || nextExam.date) : null
 
     const midTopics = subject.modules.filter(m => m.examScope === 'MID' || m.examScope === 'BOTH').flatMap(m => m.topics)
     const endTopics = subject.modules.filter(m => m.examScope === 'END' || m.examScope === 'BOTH').flatMap(m => m.topics)
@@ -106,7 +159,7 @@ export default function SubjectsPage() {
                       {module.examScope}
                     </span>
                   </div>
-                  <TopicList topics={module.topics} />
+                  <TopicList topics={module.topics} onMarkComplete={handleMarkComplete} />
                 </div>
               ))}
           </div>
@@ -123,7 +176,7 @@ export default function SubjectsPage() {
                   examName={nextExam.name}
                 />
                 <div className="divider" />
-                <CountdownTimer targetDate={nextExam.date} label={nextExam.name} size="sm" />
+                <CountdownTimer targetDate={nextExam.examDate || nextExam.date} label={nextExam.name} size="sm" />
               </div>
             )}
 
@@ -195,15 +248,7 @@ export default function SubjectsPage() {
             />
             <button
               className="btn btn-primary"
-              onClick={() => {
-                if (joinCode.length === 6) {
-                  toast.success(`Joined subject ${joinCode}! 🎉`)
-                  setShowJoin(false)
-                  setJoinCode('')
-                } else {
-                  toast.error('Enter a valid 6-character code')
-                }
-              }}
+              onClick={handleJoin}
             >
               Join
             </button>

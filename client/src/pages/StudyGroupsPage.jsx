@@ -1,63 +1,98 @@
-import { useState } from 'react'
-import { MOCK_STUDY_GROUPS } from '../utils/mockData'
+import { useEffect, useState } from 'react'
 import { useAuthStore } from '../store'
 import toast from 'react-hot-toast'
 
-const MOCK_MESSAGES = [
-  { id: 1, user: 'Priya Nair', avatar: 'PN', color: 'hsl(250,84%,62%)', text: 'Hey everyone! Can anyone explain Fast & Slow Pointer?', time: '2:30 PM' },
-  { id: 2, user: 'Rohit Verma', avatar: 'RV', color: 'hsl(168,79%,48%)', text: 'Sure! It\'s used for cycle detection in linked lists. Floyd\'s algorithm!', time: '2:32 PM' },
-  { id: 3, user: 'Arjun Sharma', avatar: 'AS', color: 'hsl(38,92%,55%)', text: 'I just completed Sliding Window — it took 90 mins but worth it!', time: '2:45 PM', isMe: true },
-  { id: 4, user: 'Sneha Patel', avatar: 'SP', color: 'hsl(200,85%,55%)', text: 'Nice! I\'m still on Two Pointer. That problem about finding pairs is tricky.', time: '3:00 PM' },
-]
-
 export default function StudyGroupsPage() {
   const { user } = useAuthStore()
-  const [groups, setGroups] = useState(MOCK_STUDY_GROUPS)
+  const [groups, setGroups] = useState([])
   const [activeGroup, setActiveGroup] = useState(null)
   const [message, setMessage] = useState('')
-  const [messages, setMessages] = useState(MOCK_MESSAGES)
+  const [messages, setMessages] = useState([])
   const [showCreate, setShowCreate] = useState(false)
   const [newGroup, setNewGroup] = useState({ name: '', subject: '' })
 
-  const joinGroup = (groupId) => {
-    setGroups(prev => prev.map(g =>
-      g._id === groupId ? { ...g, isMember: true, memberCount: g.memberCount + 1 } : g
-    ))
-    toast.success('🎉 Joined the study group!')
-  }
-
-  const sendMessage = (e) => {
-    e.preventDefault()
-    if (!message.trim()) return
-    setMessages(prev => [...prev, {
-      id: Date.now(),
-      user: user?.name || 'You',
-      avatar: (user?.name || 'Y').split(' ').map(n => n[0]).join('').toUpperCase(),
-      color: 'hsl(250,84%,62%)',
-      text: message,
-      time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-      isMe: true
-    }])
-    setMessage('')
-  }
-
-  const createGroup = () => {
-    if (!newGroup.name) { toast.error('Enter a group name'); return }
-    const group = {
-      _id: 'g' + Date.now(),
-      name: newGroup.name,
-      subject: newGroup.subject || 'General',
-      memberCount: 1,
-      maxMembers: 8,
-      members: [user?.name],
-      lastActivity: 'Just now',
-      description: 'New study group',
-      isMember: true
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { groupsAPI } = await import('../api')
+        const res = await groupsAPI.getAll()
+        setGroups(res.data.groups || [])
+      } catch {
+        toast.error('Failed to load groups')
+      }
     }
-    setGroups(prev => [...prev, group])
-    setShowCreate(false)
-    setNewGroup({ name: '', subject: '' })
-    toast.success('🎊 Study group created!')
+    load()
+  }, [])
+
+  useEffect(() => {
+    if (!activeGroup?._id) return
+    const loadMessages = async () => {
+      try {
+        const { groupsAPI } = await import('../api')
+        const res = await groupsAPI.getOne(activeGroup._id)
+        const group = res.data.group
+        setMessages((group?.messages || []).map((m, idx) => ({
+          id: `${m._id || idx}`,
+          user: m.userId?.name || 'Member',
+          avatar: (m.userId?.name || 'M').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+          color: 'hsl(250,84%,62%)',
+          text: m.text,
+          time: new Date(m.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+          isMe: (m.userId?._id || m.userId) === user?._id
+        })))
+      } catch {
+        setMessages([])
+      }
+    }
+    loadMessages()
+  }, [activeGroup, user?._id])
+
+  const joinGroup = async (groupId) => {
+    try {
+      const { groupsAPI } = await import('../api')
+      await groupsAPI.join(groupId)
+      const res = await groupsAPI.getAll()
+      setGroups(res.data.groups || [])
+      toast.success('Joined the study group')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Unable to join group')
+    }
+  }
+
+  const sendMessage = async (e) => {
+    e.preventDefault()
+    if (!message.trim() || !activeGroup?._id) return
+    try {
+      const { groupsAPI } = await import('../api')
+      await groupsAPI.sendMessage(activeGroup._id, message)
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        user: user?.name || 'You',
+        avatar: (user?.name || 'Y').split(' ').map(n => n[0]).join('').toUpperCase(),
+        color: 'hsl(250,84%,62%)',
+        text: message,
+        time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        isMe: true
+      }])
+      setMessage('')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Message send failed')
+    }
+  }
+
+  const createGroup = async () => {
+    if (!newGroup.name) { toast.error('Enter a group name'); return }
+    try {
+      const { groupsAPI } = await import('../api')
+      await groupsAPI.create({ name: newGroup.name, description: newGroup.subject || 'General' })
+      const res = await groupsAPI.getAll()
+      setGroups(res.data.groups || [])
+      setShowCreate(false)
+      setNewGroup({ name: '', subject: '' })
+      toast.success('Study group created')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to create group')
+    }
   }
 
   return (
@@ -111,6 +146,9 @@ export default function StudyGroupsPage() {
         {/* Groups List */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {groups.map(group => (
+            (() => {
+              const isMember = (group.members || []).some((m) => (m._id || m).toString() === user?._id)
+              return (
             <div
               key={group._id}
               className="card"
@@ -125,9 +163,9 @@ export default function StudyGroupsPage() {
               <div className="flex items-start justify-between mb-2">
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="font-bold text-sm">{group.name}</div>
-                  <div className="text-xs text-muted truncate">{group.subject}</div>
+                  <div className="text-xs text-muted truncate">{group.description || group.subjectId?.name || 'General'}</div>
                 </div>
-                {group.isMember ? (
+                {isMember ? (
                   <span className="badge badge-accent" style={{ flexShrink: 0, marginLeft: '8px' }}>Joined</span>
                 ) : (
                   <button
@@ -140,14 +178,14 @@ export default function StudyGroupsPage() {
                 )}
               </div>
               <div className="flex items-center gap-4">
-                <span className="text-xs text-muted">👥 {group.memberCount}/{group.maxMembers}</span>
-                <span className="text-xs text-muted">💬 {group.lastActivity}</span>
+                <span className="text-xs text-muted">👥 {(group.members || []).length}/{group.maxMembers || 8}</span>
+                <span className="text-xs text-muted">💬 Active</span>
               </div>
               {/* Member dots */}
               <div className="flex gap-1 mt-2">
-                {group.members.slice(0, 5).map((m, i) => (
+                {(group.members || []).slice(0, 5).map((m, i) => (
                   <div
-                    key={i}
+                    key={m._id || i}
                     style={{
                       width: 24, height: 24, borderRadius: '50%',
                       background: `hsl(${i * 60 + 200}, 70%, 55%)`,
@@ -156,16 +194,18 @@ export default function StudyGroupsPage() {
                       border: '2px solid var(--bg-surface)'
                     }}
                   >
-                    {m[0]}
+                    {(m.name || m)[0]}
                   </div>
                 ))}
-                {group.memberCount > 5 && (
+                {(group.members || []).length > 5 && (
                   <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--bg-surface3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', color: 'var(--text-muted)', border: '2px solid var(--bg-surface)' }}>
-                    +{group.memberCount - 5}
+                    +{(group.members || []).length - 5}
                   </div>
                 )}
               </div>
             </div>
+              )
+            })()
           ))}
         </div>
 
@@ -176,7 +216,7 @@ export default function StudyGroupsPage() {
             <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justify: 'space-between', gap: '12px' }}>
               <div>
                 <div className="font-bold">{activeGroup.name}</div>
-                <div className="text-xs text-muted">{activeGroup.memberCount} members · {activeGroup.subject}</div>
+                <div className="text-xs text-muted">{(activeGroup.members || []).length} members · {activeGroup.description || activeGroup.subjectId?.name || 'General'}</div>
               </div>
               <div className="flex gap-2 ml-auto">
                 <button className="btn btn-outline btn-sm">📎 Share Notes</button>

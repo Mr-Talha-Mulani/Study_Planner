@@ -1,14 +1,35 @@
-import { useState } from 'react'
-import { MOCK_MATERIALS, MOCK_SUBJECTS } from '../utils/mockData'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 
 const FILE_ICONS = { pdf: '📕', pptx: '📊', docx: '📝', xlsx: '📈' }
 
 export default function TeacherMaterialsPage() {
-  const [selectedSubject, setSelectedSubject] = useState(MOCK_SUBJECTS[0]._id)
-  const [materials, setMaterials] = useState(MOCK_MATERIALS[MOCK_SUBJECTS[0]._id] || [])
+  const [subjects, setSubjects] = useState([])
+  const [selectedSubject, setSelectedSubject] = useState('')
+  const [materials, setMaterials] = useState([])
   const [dragOver, setDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    import('../api').then(({ subjectsAPI }) => {
+      subjectsAPI.getAll().then(res => {
+        const subs = res.data.subjects || []
+        setSubjects(subs)
+        if (subs.length > 0) setSelectedSubject(subs[0]._id)
+        setLoading(false)
+      })
+    })
+  }, [])
+
+  useEffect(() => {
+    if (!selectedSubject) return
+    import('../api').then(({ materialsAPI }) => {
+      materialsAPI.getAll(selectedSubject).then(res => {
+        setMaterials(res.data.materials || [])
+      })
+    })
+  }, [selectedSubject])
 
   const handleDrop = async (e) => {
     e.preventDefault()
@@ -18,26 +39,29 @@ export default function TeacherMaterialsPage() {
   }
 
   const uploadFiles = async (files) => {
-    setUploading(true)
-    for (const file of files) {
-      await new Promise(r => setTimeout(r, 800))
-      const ext = file.name.split('.').pop().toLowerCase()
-      const newMaterial = {
-        _id: 'm' + Date.now(),
-        name: file.name,
-        size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-        type: ext,
-        uploadedBy: 'Prof. Meera',
-        uploadedAt: new Date().toISOString().split('T')[0],
-        mappedTopics: []
-      }
-      setMaterials(prev => [newMaterial, ...prev])
+    if (!selectedSubject) {
+      toast.error('Select a subject first')
+      return
     }
-    toast.success(`✅ ${files.length} file${files.length > 1 ? 's' : ''} uploaded! AI is mapping topics...`)
-    setUploading(false)
-    setTimeout(() => {
-      toast('🤖 AI has mapped topics to your uploaded materials!', { icon: '✅' })
-    }, 2000)
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('subjectId', selectedSubject)
+      for (const file of files) {
+        formData.append('files', file)
+      }
+      
+      const { materialsAPI } = await import('../api')
+      const res = await materialsAPI.upload(formData)
+      
+      setMaterials(prev => [...res.data.materials, ...prev])
+      toast.success(`✅ ${files.length} file${files.length > 1 ? 's' : ''} uploaded! AI mapped topics.`)
+    } catch (err) {
+      toast.error('Upload failed')
+      console.error(err)
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
@@ -53,7 +77,7 @@ export default function TeacherMaterialsPage() {
           value={selectedSubject}
           onChange={e => setSelectedSubject(e.target.value)}
         >
-          {MOCK_SUBJECTS.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
+          {subjects.map(s => <option key={s._id} value={s._id}>{s.name}</option>)}
         </select>
       </div>
 
@@ -107,25 +131,25 @@ export default function TeacherMaterialsPage() {
           <div key={material._id} className="card" style={{ padding: '14px 18px' }}>
             <div className="flex items-center gap-4">
               <div style={{ fontSize: '2rem', flexShrink: 0 }}>
-                {FILE_ICONS[material.type] || '📄'}
+                {FILE_ICONS[material.type || material.fileType] || '📄'}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="font-semibold text-sm truncate">{material.name}</div>
+                <div className="font-semibold text-sm truncate">{material.name || material.originalName}</div>
                 <div className="flex items-center gap-3 mt-1">
-                  <span className="text-xs text-muted">{material.size}</span>
-                  <span className="text-xs text-muted">Uploaded {material.uploadedAt}</span>
-                  <span className="text-xs text-muted">by {material.uploadedBy}</span>
+                  <span className="text-xs text-muted">{material.size ? Math.round(material.size / 1024) + ' KB' : material.fileSize ? Math.round(material.fileSize / 1024) + ' KB' : 'Unknown size'}</span>
+                  <span className="text-xs text-muted">Uploaded {new Date(material.createdAt || material.uploadedAt).toLocaleDateString()}</span>
+                  <span className="text-xs text-muted">by {material.uploadedBy?.name || material.uploadedBy || 'Unknown'}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {material.mappedTopics.length > 0 && (
                   <span className="badge badge-accent">{material.mappedTopics.length} topics mapped</span>
                 )}
-                <span className="badge badge-primary text-xs">{material.type.toUpperCase()}</span>
+                <span className="badge badge-primary text-xs">{(material.type || material.fileType || 'file').toUpperCase()}</span>
                 <button
                   className="btn btn-ghost btn-icon"
                   style={{ fontSize: '1rem' }}
-                  onClick={() => toast(`Preview: ${material.name}`)}
+                  onClick={() => toast(`Preview: ${material.name || material.originalName}`)}
                 >
                   👁
                 </button>

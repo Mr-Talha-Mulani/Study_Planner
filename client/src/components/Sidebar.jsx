@@ -74,9 +74,9 @@ export default function Sidebar() {
           <span className="nav-icon">{theme === 'dark' ? '☀️' : '🌙'}</span>
           <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
         </button>
-        <NavLink to="/settings" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <span className="nav-icon">⚙️</span>
-          <span>Settings</span>
+        <NavLink to="/profile" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <span className="nav-icon">👤</span>
+          <span>Profile</span>
         </NavLink>
       </div>
 

@@ -6,42 +6,42 @@
    ============================================================ */
 :root {
   /* Brand Colors */
-  --color-primary: hsl(250, 84%, 62%);
-  --color-primary-light: hsl(250, 84%, 72%);
-  --color-primary-dark: hsl(250, 84%, 50%);
-  --color-primary-glow: hsl(250, 84%, 62%, 0.3);
+  --color-primary: #008080;
+  --color-primary-light: #009999;
+  --color-primary-dark: #006666;
+  --color-primary-glow: rgba(0, 128, 128, 0.3);
 
-  --color-accent: hsl(168, 79%, 48%);
-  --color-accent-light: hsl(168, 79%, 60%);
-  --color-accent-glow: hsl(168, 79%, 48%, 0.25);
+  --color-accent: #4ECDC4;
+  --color-accent-light: #6EDDD5;
+  --color-accent-glow: rgba(78, 205, 196, 0.25);
 
   --color-danger: hsl(350, 80%, 58%);
   --color-warning: hsl(38, 92%, 55%);
-  --color-success: hsl(142, 69%, 48%);
-  --color-info: hsl(200, 85%, 55%);
+  --color-success: #4ECDC4;
+  --color-info: #008080;
 
   /* Dark Theme (Default) */
-  --bg-base: hsl(230, 20%, 7%);
-  --bg-surface: hsl(230, 18%, 11%);
-  --bg-surface2: hsl(230, 16%, 15%);
-  --bg-surface3: hsl(230, 14%, 19%);
-  --bg-card: hsl(230, 17%, 13%);
+  --bg-base: #0F2C2C;
+  --bg-surface: #153333;
+  --bg-surface2: #1A3B3B;
+  --bg-surface3: #1F4242;
+  --bg-card: #2C3E3E;
 
-  --text-primary: hsl(230, 15%, 95%);
-  --text-secondary: hsl(230, 10%, 65%);
-  --text-muted: hsl(230, 8%, 45%);
-  --text-inverse: hsl(230, 20%, 7%);
+  --text-primary: #E0F2F1;
+  --text-secondary: #B2DFDB;
+  --text-muted: #80CBC4;
+  --text-inverse: #0F2C2C;
 
-  --border-subtle: hsl(230, 15%, 20%);
-  --border-default: hsl(230, 15%, 25%);
-  --border-strong: hsl(230, 15%, 35%);
+  --border-subtle: #2C3E3E;
+  --border-default: #354B4B;
+  --border-strong: #405959;
 
   /* Gradients */
-  --grad-primary: linear-gradient(135deg, hsl(250, 84%, 62%) 0%, hsl(290, 70%, 60%) 100%);
-  --grad-accent: linear-gradient(135deg, hsl(168, 79%, 48%) 0%, hsl(200, 85%, 55%) 100%);
+  --grad-primary: linear-gradient(135deg, #008080 0%, #006666 100%);
+  --grad-accent: linear-gradient(135deg, #4ECDC4 0%, #2CB1A8 100%);
   --grad-danger: linear-gradient(135deg, hsl(350, 80%, 58%) 0%, hsl(25, 90%, 60%) 100%);
-  --grad-surface: linear-gradient(135deg, hsl(230, 18%, 12%) 0%, hsl(230, 20%, 9%) 100%);
-  --grad-card: linear-gradient(145deg, hsl(230, 17%, 14%) 0%, hsl(230, 20%, 11%) 100%);
+  --grad-surface: linear-gradient(135deg, #153333 0%, #0F2C2C 100%);
+  --grad-card: linear-gradient(145deg, #2C3E3E 0%, #203030 100%);
 
   /* Shadows */
   --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
@@ -1373,4 +1373,64 @@ h1, h2, h3, h4, h5, h6 {
 @media (max-width: 480px) {
   .auth-card { padding: var(--space-8) var(--space-6); }
   .countdown-digit { font-size: 1.8rem; }
+}
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+
+.modal {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-xl);
+  animation: slideUp 0.2s ease;
+}
+
+/* ============================================================
+   PYQ EMPTY STATE & MISC ADDITIONS
+   ============================================================ */
+.pyq-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: var(--text-muted);
+  text-align: center;
+  gap: 0.75rem;
+}
+
+/* Success background utility */
+:root {
+  --color-success-bg: hsl(168, 50%, 10%);
+}
+
+/* Subtle hover lift for interactive cards */
+.card[role=button]:hover,
+a.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Smooth transition for topic completion */
+.topic-card {
+  transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
 }

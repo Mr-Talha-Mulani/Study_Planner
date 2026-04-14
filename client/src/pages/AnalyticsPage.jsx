@@ -1,21 +1,32 @@
-import { MOCK_SUBJECTS } from '../utils/mockData'
-import { calcSubjectProgress, getDaysUntil } from '../utils/helpers'
+import { useEffect, useState } from 'react'
+import { getDaysUntil } from '../utils/helpers'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
 
-const progressHistory = [
-  { day: 'Mon', topics: 2, hours: 1.5 },
-  { day: 'Tue', topics: 4, hours: 2.8 },
-  { day: 'Wed', topics: 3, hours: 2.0 },
-  { day: 'Thu', topics: 6, hours: 3.5 },
-  { day: 'Fri', topics: 5, hours: 3.0 },
-  { day: 'Sat', topics: 8, hours: 4.5 },
-  { day: 'Sun', topics: 3, hours: 2.0 },
-]
-
 export default function AnalyticsPage() {
-  const subjects = MOCK_SUBJECTS
-  const totalTopics = subjects.flatMap(s => s.modules.flatMap(m => m.topics)).length
-  const completedTopics = subjects.flatMap(s => s.modules.flatMap(m => m.topics)).filter(t => t.status === 'COMPLETED').length
+  const [subjects, setSubjects] = useState([])
+  const [summary, setSummary] = useState({ completedTopics: 0, totalHoursStr: '0h', planAdherencePct: 0, examReadinessPct: 0 })
+  const [progressHistory, setProgressHistory] = useState([])
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { analyticsAPI, subjectsAPI } = await import('../api')
+        const [analyticsRes, subjectsRes] = await Promise.all([
+          analyticsAPI.getStudentDashboard(),
+          subjectsAPI.getAll()
+        ])
+        setSubjects(subjectsRes.data.subjects || [])
+        setSummary(analyticsRes.data.summary || summary)
+        setProgressHistory(analyticsRes.data.history || [])
+      } catch {
+        // keep safe defaults
+      }
+    }
+    load()
+  }, [])
+
+  const totalTopics = subjects.flatMap(s => (s.modules || []).flatMap(m => m.topics || [])).length
+  const completedTopics = summary.completedTopics || 0
 
   return (
     <div className="page-container fade-in">
@@ -35,15 +46,15 @@ export default function AnalyticsPage() {
         <div className="stat-card">
           <div className="stat-icon" style={{ background: 'hsl(168,79%,48%,0.12)' }}>⏱</div>
           <div>
-            <div className="stat-value" style={{ background: 'var(--grad-accent)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>24h</div>
+            <div className="stat-value" style={{ background: 'var(--grad-accent)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{summary.totalHoursStr}</div>
             <div className="stat-label">Hours This Week</div>
-            <div className="stat-delta up">↑ 4h vs last week</div>
+            <div className="stat-delta up">Tracked from progress logs</div>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-icon" style={{ background: 'hsl(38,92%,55%,0.12)' }}>🎯</div>
           <div>
-            <div className="stat-value" style={{ background: 'linear-gradient(135deg, hsl(38,92%,55%), hsl(48,96%,54%))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>78%</div>
+            <div className="stat-value" style={{ background: 'linear-gradient(135deg, hsl(38,92%,55%), hsl(48,96%,54%))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{summary.planAdherencePct}%</div>
             <div className="stat-label">Plan Adherence</div>
             <div className="stat-delta up">Consistent schedule</div>
           </div>
@@ -51,7 +62,7 @@ export default function AnalyticsPage() {
         <div className="stat-card">
           <div className="stat-icon" style={{ background: 'hsl(200,85%,55%,0.12)' }}>🧠</div>
           <div>
-            <div className="stat-value" style={{ background: 'var(--grad-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>82%</div>
+            <div className="stat-value" style={{ background: 'var(--grad-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{summary.examReadinessPct}%</div>
             <div className="stat-label">Exam Readiness</div>
             <div className="stat-delta up">Based on progress</div>
           </div>
@@ -90,12 +101,12 @@ export default function AnalyticsPage() {
       <div className="section-title mb-4">📚 Per-Subject Breakdown</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {subjects.map(sub => {
-          const topics = sub.modules.flatMap(m => m.topics)
-          const done = topics.filter(t => t.status === 'COMPLETED')
-          const inProg = topics.filter(t => t.status === 'IN_PROGRESS')
-          const pct = Math.round((done.length / topics.length) * 100)
+          const topics = (sub.modules || []).flatMap(m => m.topics || [])
+          const done = topics.filter(t => (t.status || 'NOT_STARTED') === 'COMPLETED')
+          const inProg = topics.filter(t => (t.status || 'NOT_STARTED') === 'IN_PROGRESS')
+          const pct = topics.length ? Math.round((done.length / topics.length) * 100) : 0
           const nextExam = sub.examEvents?.[0]
-          const daysLeft = nextExam ? getDaysUntil(nextExam.date) : null
+          const daysLeft = nextExam ? getDaysUntil(nextExam.date || nextExam.examDate) : null
 
           return (
             <div key={sub._id} className="card" style={{ padding: '16px 20px' }}>

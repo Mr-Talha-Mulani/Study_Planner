@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store'
 import Sidebar from './components/Sidebar'
@@ -21,10 +22,12 @@ import AnalyticsPage from './pages/AnalyticsPage'
 import TeacherDashboard from './pages/TeacherDashboard'
 import TeacherSubjectsPage from './pages/TeacherSubjectsPage'
 import TeacherMaterialsPage from './pages/TeacherMaterialsPage'
+import ProfilePage from './pages/ProfilePage'
 
 // Protected Route
 function ProtectedRoute({ children, requiredRole }) {
-  const { isAuthenticated, user } = useAuthStore()
+  const { isAuthenticated, user, isHydrated, isAuthChecking } = useAuthStore()
+  if (!isHydrated || isAuthChecking) return null
   if (!isAuthenticated) return <Navigate to="/login" replace />
   if (requiredRole && user?.role !== requiredRole) return <Navigate to="/dashboard" replace />
   return children
@@ -43,13 +46,28 @@ function AppLayout({ children }) {
 }
 
 export default function App() {
-  const { isAuthenticated, user } = useAuthStore()
+  const { isAuthenticated, user, token, isHydrated, isAuthChecking, bootstrapAuth } = useAuthStore()
+
+  useEffect(() => {
+    if (!isHydrated) return
+    if (token) {
+      bootstrapAuth()
+    }
+  }, [isHydrated, token, bootstrapAuth])
+
+  if (!isHydrated || isAuthChecking) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="text-muted">Checking session...</div>
+      </div>
+    )
+  }
 
   return (
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={isAuthenticated ? <Navigate to={user?.role === 'TEACHER' ? '/teacher/dashboard' : '/dashboard'} /> : <LoginPage />} />
-      <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" /> : <RegisterPage />} />
+      <Route path="/register" element={isAuthenticated ? <Navigate to={user?.role === 'TEACHER' ? '/teacher/dashboard' : '/dashboard'} /> : <RegisterPage />} />
       <Route path="/" element={<Navigate to={isAuthenticated ? (user?.role === 'TEACHER' ? '/teacher/dashboard' : '/dashboard') : '/login'} />} />
 
       {/* Student Routes */}
@@ -141,6 +159,13 @@ export default function App() {
       <Route path="/teacher/analytics" element={
         <ProtectedRoute requiredRole="TEACHER">
           <AppLayout><AnalyticsPage /></AppLayout>
+        </ProtectedRoute>
+      } />
+
+      {/* Shared Routes */}
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          <AppLayout><ProfilePage /></AppLayout>
         </ProtectedRoute>
       } />
 

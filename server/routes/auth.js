@@ -21,7 +21,7 @@ router.post('/register', async (req, res) => {
     if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' })
 
     const existing = await User.findOne({ email: email.toLowerCase() })
-    if (existing) return res.status(409).json({ error: 'Email already registered' })
+    if (existing) return res.status(409).json({ error: 'User already exists' })
 
     const user = new User({ name, email, passwordHash: password, role: role || 'STUDENT', institution })
     await user.save()
@@ -32,7 +32,10 @@ router.post('/register', async (req, res) => {
       user: { _id: user._id, name: user.name, email: user.email, role: user.role, institution: user.institution }
     })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    if (err.code === 11000) {
+      return res.status(409).json({ error: 'User already exists' })
+    }
+    res.status(500).json({ error: 'Server error' })
   }
 })
 
@@ -54,7 +57,19 @@ router.post('/login', async (req, res) => {
       user: { _id: user._id, name: user.name, email: user.email, role: user.role, institution: user.institution }
     })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// POST /api/auth/refresh
+router.post('/refresh', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-passwordHash')
+    if (!user) return res.status(404).json({ error: 'User not found' })
+    const token = signToken(user)
+    res.json({ token, user })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
   }
 })
 
@@ -65,7 +80,7 @@ router.get('/me', authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' })
     res.json({ user })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: 'Server error' })
   }
 })
 
@@ -80,7 +95,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
     )
     res.json({ user })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: 'Server error' })
   }
 })
 

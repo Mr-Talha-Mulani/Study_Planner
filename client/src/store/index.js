@@ -7,11 +7,34 @@ export const useAuthStore = create(
       user: null,
       token: null,
       isAuthenticated: false,
+      isHydrated: false,
+      isAuthChecking: false,
 
       setAuth: (user, token) => set({ user, token, isAuthenticated: true }),
 
       logout: () => {
         set({ user: null, token: null, isAuthenticated: false })
+      },
+
+      setHydrated: (value) => set({ isHydrated: value }),
+
+      bootstrapAuth: async () => {
+        const state = get()
+        if (!state.token) {
+          set({ isHydrated: true, isAuthChecking: false })
+          return
+        }
+
+        set({ isAuthChecking: true })
+        try {
+          const { authAPI } = await import('../api')
+          const res = await authAPI.me()
+          set({ user: res.data.user, isAuthenticated: true })
+        } catch {
+          set({ user: null, token: null, isAuthenticated: false })
+        } finally {
+          set({ isHydrated: true, isAuthChecking: false })
+        }
       },
 
       updateUser: (updates) => set((state) => ({
@@ -20,7 +43,10 @@ export const useAuthStore = create(
     }),
     {
       name: 'ssp-auth',
-      partialize: (state) => ({ user: state.user, token: state.token, isAuthenticated: state.isAuthenticated })
+      partialize: (state) => ({ user: state.user, token: state.token, isAuthenticated: state.isAuthenticated }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated(true)
+      }
     }
   )
 )
@@ -66,4 +92,30 @@ export const useAppStore = create((set, get) => ({
       totalXP: state.stats.totalXP + 10
     }
   })),
+
+  updateTopicStatus: (topicId, status) => set((state) => {
+    const updatedSubjects = state.subjects.map(sub => ({
+      ...sub,
+      modules: sub.modules?.map(mod => ({
+        ...mod,
+        topics: mod.topics?.map(topic => 
+          topic._id === topicId ? { ...topic, status } : topic
+        )
+      }))
+    }))
+    
+    // Recalculate stats
+    const allTopics = updatedSubjects.flatMap(s => (s.modules || []).flatMap(m => m.topics || []))
+    const completed = allTopics.filter(t => t.status === 'COMPLETED').length
+    
+    const updatedCurrentSubject = state.currentSubject ? 
+      updatedSubjects.find(s => s._id === state.currentSubject._id) || state.currentSubject
+      : null;
+
+    return { 
+      subjects: updatedSubjects,
+      currentSubject: updatedCurrentSubject,
+      stats: { ...state.stats, completedTopics: completed }
+    }
+  }),
 }))

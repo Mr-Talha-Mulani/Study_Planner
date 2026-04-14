@@ -58,4 +58,16 @@ router.get('/:subjectId', authMiddleware, async (req, res) => {
   }
 })
 
+// GET /api/materials/user/my-uploads
+router.get('/user/my-uploads', authMiddleware, async (req, res) => {
+  try {
+    const materials = await Material.find({ uploadedBy: req.user.id })
+      .populate('subjectId', 'name')
+      .sort({ createdAt: -1 })
+    res.json({ materials })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 module.exports = router
