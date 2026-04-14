@@ -65,11 +65,11 @@
   --space-16: 4rem;
   --space-20: 5rem;
 
-  /* Border Radius - Refined Doodle (More crisp, less disoriented) */
+  /* Border Radius - Organized Doodle (Standard rounded corners for cleaner look) */
   --radius-sm: 4px;
-  --radius-md: 185px 8px 175px 12px/12px 175px 8px 185px;
-  --radius-lg: 255px 15px 245px 18px/18px 245px 15px 255px;
-  --radius-xl: 300px 20px 280px 25px/25px 300px 20px 280px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 32px;
   --radius-full: 9999px;
 
   /* Typography */
@@ -113,6 +113,10 @@ html {
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-base);
+  background-image: 
+    radial-gradient(rgba(139, 69, 19, 0.1) 1.5px, transparent 0);
+  background-size: 24px 24px;
+  background-position: center;
   color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;

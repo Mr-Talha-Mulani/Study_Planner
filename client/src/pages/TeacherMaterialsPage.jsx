@@ -84,7 +84,17 @@ export default function TeacherMaterialsPage() {
       {/* Upload Zone */}
       <div
         id="materials-upload-zone"
-        className={`upload-zone mb-6 ${dragOver ? 'dragover' : ''}`}
+        className={`card mb-6 ${dragOver ? 'dragover' : ''}`}
+        style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          padding: '3rem', 
+          borderStyle: 'dashed',
+          cursor: 'pointer',
+          background: dragOver ? 'var(--bg-surface2)' : '#fff'
+        }}
         onDragOver={e => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
@@ -101,25 +111,27 @@ export default function TeacherMaterialsPage() {
         {uploading ? (
           <>
             <div className="spinner" style={{ margin: '0 auto 16px' }} />
-            <div className="font-semibold">Uploading & AI mapping...</div>
+            <div className="font-bold">Uploading & AI mapping...</div>
           </>
         ) : (
           <>
-            <div className="upload-zone-icon">📂</div>
-            <div className="font-semibold text-lg">Drop Files Here</div>
-            <div className="text-sm text-muted">PDF, DOCX, PPTX · Multiple files supported</div>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📂</div>
+            <div className="font-bold text-lg">Drop Files Here</div>
+            <div className="text-sm text-muted font-bold">PDF, DOCX, PPTX · Multiple files supported</div>
             <div className="btn btn-primary btn-sm mt-4" style={{ pointerEvents: 'none' }}>Browse Files</div>
           </>
         )}
       </div>
 
-      {/* Alert */}
-      <div className="alert alert-info mb-6">
-        <span>🤖</span>
-        <div>
-          <div className="font-semibold">AI Topic Mapping</div>
-          <div style={{ fontSize: '0.8rem', marginTop: '4px' }}>
-            After upload, AI automatically maps each file to relevant syllabus topics based on filename and content analysis. Students can then see exactly which file covers which topic.
+      {/* AI Help Card */}
+      <div className="card mb-6" style={{ background: 'var(--bg-surface2)', borderLeft: '10px solid var(--color-info)' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+          <span style={{ fontSize: '1.5rem' }}>🤖</span>
+          <div>
+            <div className="font-bold uppercase text-xs" style={{ color: 'var(--color-info)' }}>AI Topic Mapping</div>
+            <div style={{ fontSize: '0.875rem', marginTop: '4px', fontWeight: 500 }}>
+              After upload, AI automatically maps each file to relevant syllabus topics based on filename and content analysis. Students can then see exactly which file covers which topic.
+            </div>
           </div>
         </div>
       </div>

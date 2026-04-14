@@ -131,61 +131,79 @@ export default function ProfilePage() {
           {/* Badges Section */}
           {user?.role === 'STUDENT' && (
             <div className="card">
-              <div className="section-title mb-4">🏆 My Badges</div>
-              <div className="flex flex-wrap gap-4">
-                {(stats?.badges || []).filter(b => b.earned).length > 0 ? (
-                  (stats?.badges || []).filter(b => b.earned).map(badge => (
-                    <div key={badge.id} className="text-center" style={{ width: 80 }}>
-                      <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>{badge.icon}</div>
-                      <div className="text-xs font-semibold" style={{ lineHeight: 1.2 }}>{badge.name}</div>
+              <div className="section-title mb-4">🏆 My Achievements</div>
+              <div className="flex flex-wrap gap-6" style={{ justifyContent: 'center' }}>
+                {(stats?.badges || []).length > 0 ? (
+                  (stats?.badges || []).map((badge, idx) => (
+                    <div key={idx} className="text-center" style={{ width: 100 }}>
+                      <div className="card" style={{ 
+                        padding: '1rem', 
+                        marginBottom: '8px', 
+                        fontSize: '2rem', 
+                        background: 'var(--bg-surface)',
+                        borderRadius: 'var(--radius-md)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        aspectRatio: '1/1'
+                      }}>
+                        {badge.badge === 'Topper' ? '👑' : 
+                         badge.badge === '7 Day Streak' ? '🔥' : 
+                         badge.badge === 'PYQ Master' ? '📝' : 
+                         badge.badge === 'Consistent Learner' ? '📅' : '🏅'}
+                      </div>
+                      <div className="text-xs font-bold" style={{ lineHeight: 1.2 }}>{badge.badge}</div>
+                      <div className="text-[10px] text-muted">+{badge.xp} XP</div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-muted text-sm w-full text-center p-4">No badges earned yet. Keep studying!</div>
+                  <div className="text-muted text-sm w-full text-center p-4">No achievements earned yet. Start studying to unlock them!</div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Uploads Section */}
-          <div className="card">
-            <div className="section-title mb-4">📁 My Uploaded Materials</div>
-            {materials.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {materials.map(mat => (
-                  <div 
-                    key={mat._id} 
-                    className="flex justify-between items-center"
-                    style={{ 
-                      padding: '12px', 
-                      background: 'var(--bg-surface2)', 
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--border-subtle)'
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">
-                        {mat.fileType === 'pdf' ? '📄' : mat.fileType === 'pptx' ? '📊' : '📃'}
-                      </span>
-                      <div>
-                        <div className="text-sm font-semibold">{mat.originalName}</div>
-                        <div className="text-xs text-muted">
-                           {mat.subjectId?.name || 'Unknown Subject'} • {(mat.fileSize / 1024 / 1024).toFixed(2)} MB
+          {/* Uploads Section (Teachers Only) */}
+          {user?.role === 'TEACHER' && (
+            <div className="card">
+              <div className="section-title mb-4">📁 Your Uploaded Materials</div>
+              {materials.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {materials.map(mat => (
+                    <div 
+                      key={mat._id} 
+                      className="flex justify-between items-center"
+                      style={{ 
+                        padding: '12px', 
+                        background: 'var(--bg-surface2)', 
+                        borderRadius: 'var(--radius-md)',
+                        border: '2px solid #000'
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">
+                          {mat.fileType === 'pdf' ? '📄' : mat.fileType === 'pptx' ? '📊' : '📃'}
+                        </span>
+                        <div>
+                          <div className="text-sm font-semibold">{mat.originalName}</div>
+                          <div className="text-xs text-muted">
+                            {mat.subjectId?.name || 'Unknown Subject'} • {(mat.fileSize / 1024 / 1024).toFixed(2)} MB
+                          </div>
                         </div>
                       </div>
+                      <div className="text-xs text-muted">
+                        {new Date(mat.createdAt).toLocaleDateString()}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted">
-                      {new Date(mat.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-muted text-sm w-full text-center p-6 bg-surface2 rounded-lg border border-dashed border-subtle">
-                You haven't uploaded any materials yet.
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-muted text-sm w-full text-center p-6 bg-surface2 rounded-lg border-2 border-dashed border-black">
+                  You haven't uploaded any materials yet.
+                </div>
+              )}
+            </div>
+          )}
 
         </div>
       </div>
