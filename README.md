@@ -99,7 +99,8 @@ node seed.js
 
 ## 🎨 Default Test Accounts
 If the database was properly seeded above, you can log in immediately using the following credentials:
-* **Teacher Login:** `teacher@demo.com` / `demo1234`
-* **Student Login:** `student1@demo.com` / `demo1234`
+* **Teacher Login:** `meera@college.in` / `demo1234`
+* **Student Login (Topper):** `aarav@edu.in` / `demo1234`
+* **Student Login (Average):** `neha@edu.in` / `demo1234`
 
 Enjoy studying! 🚀
