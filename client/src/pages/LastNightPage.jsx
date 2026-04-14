@@ -120,8 +120,9 @@ export default function LastNightPage() {
                         display: 'flex', alignItems: 'center', gap: '12px',
                         padding: '10px 14px',
                         borderRadius: 'var(--radius-md)',
-                        background: subjects.includes(sub._id) ? 'hsl(250,84%,62%,0.08)' : 'var(--bg-surface2)',
-                        border: `1px solid ${subjects.includes(sub._id) ? 'hsl(250,84%,62%,0.3)' : 'var(--border-subtle)'}`,
+                        background: subjects.includes(sub._id) ? 'var(--color-warning)' : 'var(--bg-surface2)',
+                        border: '2px solid #000',
+                        boxShadow: subjects.includes(sub._id) ? 'inset 2px 2px 0px rgba(0,0,0,0.2)' : '2px 2px 0px #000',
                         cursor: 'pointer',
                         transition: 'all 0.15s'
                       }}
@@ -209,10 +210,11 @@ export default function LastNightPage() {
                   className="card"
                   style={{
                     cursor: 'pointer',
-                    background: done ? 'hsl(142,69%,48%,0.08)' : 'var(--grad-card)',
-                    border: done ? '1px solid hsl(142,69%,48%,0.25)' : '1px solid var(--border-subtle)',
+                    background: done ? 'rgba(139, 69, 19, 0.15)' : 'var(--bg-card)',
+                    border: done ? '2px solid #8B4513' : '2px solid #000',
+                    boxShadow: done ? '2px 2px 0px #8B4513' : '3px 3px 0px #000',
                     transition: 'all 0.2s',
-                    opacity: done ? 0.75 : 1
+                    opacity: done ? 0.85 : 1
                   }}
                 >
                   <div className="flex items-start gap-3">
@@ -220,11 +222,12 @@ export default function LastNightPage() {
                     <div style={{
                       width: 32, height: 32,
                       borderRadius: '50%',
-                      background: done ? 'var(--grad-accent)' : idx < 3 ? 'var(--grad-danger)' : 'var(--bg-surface3)',
+                      background: done ? '#8B4513' : idx < 3 ? 'var(--color-danger)' : 'var(--bg-surface3)',
+                      border: '2px solid #000',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: done ? '1rem' : '0.8rem',
+                      fontSize: done ? '1.2rem' : '1rem',
                       fontWeight: 800,
-                      color: 'white',
+                      color: done ? '#FFF' : '#000',
                       flexShrink: 0
                     }}>
                       {done ? '✓' : idx + 1}
@@ -232,10 +235,10 @@ export default function LastNightPage() {
 
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
-                        fontWeight: 700,
-                        fontSize: '0.9rem',
+                        fontWeight: 800,
+                        fontSize: '1rem',
                         textDecoration: done ? 'line-through' : 'none',
-                        color: done ? 'var(--text-muted)' : 'var(--text-primary)',
+                        color: done ? '#8B4513' : 'var(--text-primary)',
                         marginBottom: '6px'
                       }}>
                         {topic.title}

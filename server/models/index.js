@@ -111,6 +111,8 @@ const ExamEvent = mongoose.model('ExamEvent', examEventSchema)
 // STUDY PLAN SCHEMA
 // ============================================================
 const studyPlanSchema = new mongoose.Schema({
+  name: { type: String, default: 'My Study Plan' },
+  isPinned: { type: Boolean, default: false },
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   subjectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true },
   examEventId: { type: mongoose.Schema.Types.ObjectId, ref: 'ExamEvent' },
@@ -179,4 +181,17 @@ const chatLogSchema = new mongoose.Schema({
 
 const ChatLog = mongoose.model('ChatLog', chatLogSchema)
 
-module.exports = { User, Subject, Module, Topic, TopicProgress, ExamEvent, StudyPlan, Material, StudyGroup, ChatLog }
+// ============================================================
+// GOAL SCHEMA
+// ============================================================
+const goalSchema = new mongoose.Schema({
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  title: { type: String, required: true },
+  description: String,
+  targetDate: { type: Date },
+  status: { type: String, enum: ['PENDING', 'ACHIEVED', 'FAILED'], default: 'PENDING' },
+}, { timestamps: true })
+
+const Goal = mongoose.model('Goal', goalSchema)
+
+module.exports = { User, Subject, Module, Topic, TopicProgress, ExamEvent, StudyPlan, Material, StudyGroup, ChatLog, Goal }

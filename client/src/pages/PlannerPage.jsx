@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { formatMins, getDaysUntil } from '../utils/helpers'
 import toast from 'react-hot-toast'
+import PomodoroTimer from '../components/PomodoroTimer'
 
 export default function PlannerPage() {
+  const [allPlans, setAllPlans] = useState([])
+  const [activePlanId, setActivePlanId] = useState(null)
   const [plan, setPlan] = useState([])
   const [generating, setGenerating] = useState(false)
   const [subjects, setSubjects] = useState([])
@@ -23,8 +26,12 @@ export default function PlannerPage() {
           setTargetExamId(subList[0].examEvents?.[0]?._id || '')
         }
 
-        const active = (planRes.data.plans || [])[0]
+        const loadedPlans = planRes.data.plans || []
+        setAllPlans(loadedPlans)
+
+        const active = loadedPlans[0]
         if (active) {
+          setActivePlanId(active._id)
           const { topicsAPI } = await import('../api')
           const subId = active.subjectId._id || active.subjectId
           
@@ -120,18 +127,92 @@ export default function PlannerPage() {
     }
   }
 
+  const handlePin = async (id) => {
+    try {
+      const { planAPI } = await import('../api')
+      await planAPI.pinPlan(id)
+      setAllPlans(prev => prev.map(p => p._id === id ? { ...p, isPinned: !p.isPinned } : p))
+      toast.success('Pin status updated')
+    } catch {
+      toast.error('Failed to pin plan')
+    }
+  }
+
+  const selectPlan = async (selectedP) => {
+    setActivePlanId(selectedP._id)
+    const { topicsAPI } = await import('../api')
+    const subId = selectedP.subjectId._id || selectedP.subjectId
+    try {
+      const progRes = await topicsAPI.getProgress(subId)
+      let progMap = {}
+      progRes.data.progress.forEach(p => {
+        if (p.status === 'COMPLETED') progMap[p.topicId.toString()] = 'DONE'
+      })
+      setTaskStatuses(progMap)
+    } catch {}
+
+    const mapped = (selectedP.days || []).map((day) => ({
+      date: day.date,
+      topics: (day.topicIds || []).map((topic) => ({
+        topicId: topic._id,
+        topicTitle: topic.title,
+        estimatedMins: topic.estimatedMins || 30,
+        status: 'NOT_STARTED'
+      })),
+      totalMins: day.totalMins || 0
+    }))
+    setPlan(mapped)
+    setActiveDay(0)
+  }
+
   return (
     <div className="page-container fade-in">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 no-print">
         <div>
           <h1 className="page-title">📅 Study Planner</h1>
           <p className="page-subtitle">AI-generated day-by-day study schedule based on your syllabus and exam dates</p>
         </div>
+        <button className="btn btn-outline" onClick={() => window.print()}>
+          📄 Export PDF
+        </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '1.5rem' }}>
-        {/* Config Panel */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {allPlans.length > 0 && (
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 no-print">
+          {allPlans.map(p => (
+            <div key={p._id} className="flex items-center gap-1">
+               <button 
+                 onClick={() => selectPlan(p)}
+                 className={`btn btn-sm ${activePlanId === p._id ? 'btn-primary' : 'btn-ghost'}`}
+                 style={{ borderRadius: 'var(--radius-md) 0 0 var(--radius-md)' }}
+               >
+                 {p.isPinned ? '📌 ' : ''}{p.subjectId?.name || p.name || 'Plan'}
+               </button>
+               <button 
+                 className={`btn btn-sm ${activePlanId === p._id ? 'btn-primary' : 'btn-ghost'}`} 
+                 onClick={() => handlePin(p._id)}
+                 title={p.isPinned ? "Unpin" : "Pin"}
+                 style={{ borderRadius: '0 var(--radius-md) var(--radius-md) 0', padding: '0 8px' }}
+               >
+                 {p.isPinned ? '✖' : '📌'}
+               </button>
+            </div>
+          ))}
+          <button 
+            className={`btn btn-sm btn-icon ${!activePlanId ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => { setActivePlanId(null); setPlan([]) }}
+            title="Create New Plan"
+          >
+             ➕
+          </button>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: activePlanId ? '1fr 320px' : '320px 1fr', gap: '1.5rem' }}>
+        
+        {/* Toggle Config Panel visibility when in Create Mode vs View Mode */}
+        {(!activePlanId) && (
+          <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div className="card">
             <div className="section-title mb-4">⚙️ Generate Plan</div>
 
@@ -218,9 +299,10 @@ export default function PlannerPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* Plan View */}
-        <div>
+        <div style={{ order: activePlanId ? -1 : 1 }}>
           {plan.length > 0 ? (
             <>
               {/* Day Selector */}
@@ -399,14 +481,23 @@ export default function PlannerPage() {
           ) : (
             <div className="card" style={{ textAlign: 'center', padding: '4rem' }}>
               <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📅</div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>No Plan Generated Yet</div>
-              <div className="text-muted text-sm mb-4">Configure your preferences and let AI create the perfect study schedule</div>
-              <button className="btn btn-primary" onClick={generatePlan}>
-                🤖 Generate My Plan
-              </button>
+              <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>No Plan Configured</div>
+              <div className="text-muted text-sm mb-4">Click "Generate AI Plan" or select a tab to load your study schedule.</div>
+              {!activePlanId && (
+                <button className="btn btn-primary mt-2" onClick={generatePlan}>
+                  🤖 Generate New Plan
+                </button>
+              )}
             </div>
           )}
         </div>
+
+        {/* Floating Widgets Sidebar when active */}
+        {activePlanId && (
+          <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+             <PomodoroTimer />
+          </div>
+        )}
       </div>
     </div>
   )

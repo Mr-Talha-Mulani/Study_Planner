@@ -83,6 +83,7 @@ router.post('/generate', authMiddleware, async (req, res) => {
       studentId: req.user.id,
       subjectId,
       examEventId: targetExamId,
+      name: `Plan - ${new Date().toLocaleDateString('en-US')}`,
       dailyHours,
       days,
       isActive: true
@@ -103,10 +104,28 @@ router.post('/generate', authMiddleware, async (req, res) => {
 // GET /api/plan
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const plans = await StudyPlan.find({ studentId: req.user.id, isActive: true })
+    // Fetch active or pinned plans
+    const plans = await StudyPlan.find({ 
+      studentId: req.user.id, 
+      $or: [{ isActive: true }, { isPinned: true }] 
+    })
+      .sort({ createdAt: -1 })
       .populate('subjectId', 'name color code')
       .populate('days.topicIds', 'title difficulty estimatedMins')
     res.json({ plans })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// PUT /api/plan/:id/pin
+router.put('/:id/pin', authMiddleware, async (req, res) => {
+  try {
+    const plan = await StudyPlan.findOne({ _id: req.params.id, studentId: req.user.id })
+    if (!plan) return res.status(404).json({ error: 'Plan not found' })
+    plan.isPinned = !plan.isPinned
+    await plan.save()
+    res.json({ plan })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

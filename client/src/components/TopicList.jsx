@@ -7,6 +7,8 @@ export default function TopicList({ topics = [], onMarkComplete, canEdit = false
   const updateTopicStatus = useAppStore(s => s.updateTopicStatus)
   const [localTopics, setLocalTopics] = useState(topics)
   const [saving, setSaving] = useState(null)
+  const [expandedNote, setExpandedNote] = useState(null) // topicId
+  const [noteText, setNoteText] = useState('')
 
   useEffect(() => {
     setLocalTopics(topics)
@@ -41,6 +43,21 @@ export default function TopicList({ topics = [], onMarkComplete, canEdit = false
       updateTopicStatus(topicId, revertStatus)
       onMarkComplete?.(topicId, revertStatus) // Revert parent UI 
       toast.error('Failed to save. Try again.')
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  const saveNote = async (topicId) => {
+    try {
+      setSaving(topicId)
+      const { topicsAPI } = await import('../api')
+      await topicsAPI.updateProgress(topicId, localTopics.find(t=>t._id===topicId)?.status || 'NOT_STARTED', { notes: noteText })
+      toast.success('Note saved!')
+      setLocalTopics(prev => prev.map(t => t._id === topicId ? { ...t, notes: noteText } : t))
+      setExpandedNote(null)
+    } catch {
+      toast.error('Failed to save note')
     } finally {
       setSaving(null)
     }
@@ -85,27 +102,61 @@ export default function TopicList({ topics = [], onMarkComplete, canEdit = false
                 {difficultyLabel(topic.difficulty)}
               </span>
               <span className="text-xs text-muted">⏱ {formatMins(topic.estimatedMins)}</span>
-              {topic.importanceScore >= 8 && (
+              {topic.importanceScore >= 8 ? (
                 <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'hsl(350, 80%, 72%)', background: 'hsl(350,80%,58%,0.1)', padding: '2px 7px', borderRadius: '999px', border: '1px solid hsl(350,80%,58%,0.2)' }}>
                   🔥 High Priority
+                </span>
+              ) : topic.importanceScore >= 5 ? (
+                <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'hsl(38, 92%, 65%)', background: 'hsl(38,92%,65%,0.1)', padding: '2px 7px', borderRadius: '999px', border: '1px solid hsl(38,92%,65%,0.2)' }}>
+                  ⚡ Med Priority
+                </span>
+              ) : (
+                <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-surface2)', padding: '2px 7px', borderRadius: '999px', border: '1px solid var(--border-subtle)' }}>
+                  🧊 Low Priority
                 </span>
               )}
               {topic.pageRef && (
                 <span className="text-xs text-muted" style={{ fontStyle: 'italic' }}>📄 {topic.pageRef}</span>
               )}
             </div>
+            
+            {/* Notes UI */}
+            {expandedNote === topic._id && (
+              <div style={{ marginTop: '10px' }} onClick={e => e.stopPropagation()}>
+                <textarea 
+                  className="form-input" 
+                  style={{ minHeight: '60px', padding: '8px', fontSize: '0.8rem' }}
+                  placeholder="Add your study notes here..."
+                  value={noteText}
+                  onChange={e => setNoteText(e.target.value)}
+                />
+                <div className="flex justify-end gap-2 mt-2">
+                  <button className="btn btn-ghost btn-sm" onClick={() => setExpandedNote(null)}>Cancel</button>
+                  <button className="btn btn-primary btn-sm" onClick={() => saveNote(topic._id)}>Save Note</button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Importance score */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-            <div style={{
-              fontSize: '0.75rem',
-              fontWeight: 800,
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            <button 
+              className="btn btn-ghost btn-icon" 
+              style={{ padding: '4px' }}
+              onClick={(e) => { e.stopPropagation(); setExpandedNote(topic._id === expandedNote ? null : topic._id); setNoteText(topic.notes || '') }}
+              title="Add Notes"
+            >
+              📝
+            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+              <div style={{
+                fontSize: '0.75rem',
+                fontWeight: 800,
               color: topic.importanceScore >= 8 ? 'hsl(350,80%,72%)' : topic.importanceScore >= 6 ? 'hsl(38,92%,65%)' : 'var(--text-muted)'
             }}>
               {topic.importanceScore}/10
             </div>
             <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Imp</div>
+            </div>
           </div>
         </div>
       ))}

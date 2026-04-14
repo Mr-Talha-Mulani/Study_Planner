@@ -65,6 +65,7 @@ export default function GamificationPage() {
             key={tab}
             className={`tab ${activeTab === tab ? 'active' : ''}`}
             onClick={() => setActiveTab(tab)}
+            style={{ fontFamily: 'var(--font-display)', fontWeight: activeTab === tab ? 800 : 600, fontSize: '1.05rem', padding: '12px 24px' }}
           >
             {tab === 'overview' ? '📊 Overview' : tab === 'badges' ? '🏅 Badges' : '🥇 Leaderboard'}
           </button>
@@ -122,22 +123,22 @@ export default function GamificationPage() {
           </div>
 
           {/* Recent Badges */}
-          <div className="section-title mb-4">🏅 Recently Earned</div>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+          <div className="section-title mb-4" style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 800 }}>🏅 Recently Earned</div>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '2rem' }}>
             {gamification.badges.map((badge, idx) => (
-              <div key={badge.id} className="card card-accent flex items-center gap-3" style={{ padding: '12px 16px', minWidth: 0 }}>
-                <span style={{ fontSize: '1.8rem' }}>{badge.badge || '🏅'}</span>
+              <div key={badge.id} className="card card-accent flex items-center gap-3" style={{ padding: '14px 20px', minWidth: 0, border: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-sm)' }}>
+                <span style={{ fontSize: '2.2rem' }}>{badge.badge || '🏅'}</span>
                 <div>
-                  <div className="text-sm font-bold">Badge #{idx + 1}</div>
-                  <div className="text-xs text-muted">Achievement unlocked</div>
-                  <div className="text-xs mt-1" style={{ color: 'hsl(38,92%,65%)' }}>+{badge.xp || 0} XP</div>
+                  <div className="text-sm" style={{ fontFamily: 'var(--font-display)', fontWeight: 800 }}>Achievement {idx + 1}</div>
+                  <div className="text-xs text-muted mb-1">Badge unlocked</div>
+                  <div className="badge badge-accent" style={{ fontSize: '0.65rem' }}>+{badge.xp || 0} XP</div>
                 </div>
               </div>
             ))}
           </div>
 
           {/* Subject Progress */}
-          <div className="section-title mb-4">📚 Progress by Subject</div>
+          <div className="section-title mb-4" style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 800 }}>📚 Progress by Subject</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {subjects.map(sub => {
               const topics = (sub.modules || []).flatMap(m => m.topics || [])

@@ -149,6 +149,9 @@ export default function DashboardPage() {
                   label={nextExam.name}
                   size="sm"
                 />
+                <div className="text-xs mt-4 p-2" style={{ background: 'var(--bg-surface2)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                  <span style={{ fontWeight: 800 }}>ETA Tracker:</span> At your current pace, you will finish the syllabus on <strong>{formatDate(new Date((nextExam.date || nextExam.examDate)).getTime() - (2 * 86400000))}</strong>.
+                </div>
               </div>
             </div>
           </div>

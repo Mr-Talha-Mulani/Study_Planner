@@ -59,6 +59,7 @@ export const planAPI = {
   generate: (subjectId, data) => api.post('/plan/generate', { ...data, subjectId }),
   getActive: () => api.get(`/plan`),
   getToday: () => api.get('/plan/today'),
+  pinPlan: (id) => api.put(`/plan/${id}/pin`),
 }
 
 // AI

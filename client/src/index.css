@@ -1,56 +1,56 @@
 /* Smart Study Planner — Design System */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap');
 
 /* ============================================================
-   CSS CUSTOM PROPERTIES (DESIGN TOKENS)
+   CSS CUSTOM PROPERTIES (Doodle Style)
    ============================================================ */
 :root {
   /* Brand Colors */
-  --color-primary: #008080;
-  --color-primary-light: #009999;
-  --color-primary-dark: #006666;
-  --color-primary-glow: rgba(0, 128, 128, 0.3);
+  --color-primary: #000000;
+  --color-primary-light: #333333;
+  --color-primary-dark: #000000;
+  --color-primary-glow: transparent;
 
-  --color-accent: #4ECDC4;
-  --color-accent-light: #6EDDD5;
-  --color-accent-glow: rgba(78, 205, 196, 0.25);
+  --color-accent: #000000;
+  --color-accent-light: #333333;
+  --color-accent-glow: transparent;
 
-  --color-danger: hsl(350, 80%, 58%);
-  --color-warning: hsl(38, 92%, 55%);
-  --color-success: #4ECDC4;
-  --color-info: #008080;
+  --color-danger: #e63946;
+  --color-warning: #f4a261;
+  --color-success: #2a9d8f;
+  --color-info: #457b9d;
 
-  /* Dark Theme (Default) */
-  --bg-base: #0F2C2C;
-  --bg-surface: #153333;
-  --bg-surface2: #1A3B3B;
-  --bg-surface3: #1F4242;
-  --bg-card: #2C3E3E;
+  /* Sketch Backgrounds */
+  --bg-base: #FAF3E0;
+  --bg-surface: #FDF6E3;
+  --bg-surface2: #FDF6E3;
+  --bg-surface3: #FDF6E3;
+  --bg-card: #FFFFFF;
 
-  --text-primary: #E0F2F1;
-  --text-secondary: #B2DFDB;
-  --text-muted: #80CBC4;
-  --text-inverse: #0F2C2C;
+  --text-primary: #1A1A1A;
+  --text-secondary: #333333;
+  --text-muted: #666666;
+  --text-inverse: #FFFFFF;
 
-  --border-subtle: #2C3E3E;
-  --border-default: #354B4B;
-  --border-strong: #405959;
+  --border-subtle: #000000;
+  --border-default: #000000;
+  --border-strong: #000000;
 
-  /* Gradients */
-  --grad-primary: linear-gradient(135deg, #008080 0%, #006666 100%);
-  --grad-accent: linear-gradient(135deg, #4ECDC4 0%, #2CB1A8 100%);
-  --grad-danger: linear-gradient(135deg, hsl(350, 80%, 58%) 0%, hsl(25, 90%, 60%) 100%);
-  --grad-surface: linear-gradient(135deg, #153333 0%, #0F2C2C 100%);
-  --grad-card: linear-gradient(145deg, #2C3E3E 0%, #203030 100%);
+  /* Gradients (Removed for flat sketch look) */
+  --grad-primary: #000000;
+  --grad-accent: #000000;
+  --grad-danger: #e63946;
+  --grad-surface: #FDF6E3;
+  --grad-card: transparent;
 
-  /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
-  --shadow-xl: 0 16px 48px rgba(0,0,0,0.6);
-  --shadow-primary: 0 4px 24px hsl(250, 84%, 62%, 0.3);
-  --shadow-accent: 0 4px 24px hsl(168, 79%, 48%, 0.25);
-  --shadow-danger: 0 4px 24px hsl(350, 80%, 58%, 0.3);
+  /* Paper Shadows */
+  --shadow-sm: 2px 2px 0px #000000;
+  --shadow-md: 3px 3px 0px #000000;
+  --shadow-lg: 4px 4px 0px #000000;
+  --shadow-xl: 6px 6px 0px #000000;
+  --shadow-primary: 3px 3px 0px #000000;
+  --shadow-accent: 3px 3px 0px #000000;
+  --shadow-danger: 3px 3px 0px #000000;
 
   /* Spacing */
   --space-1: 0.25rem;
@@ -65,52 +65,34 @@
   --space-16: 4rem;
   --space-20: 5rem;
 
-  /* Border Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  /* Border Radius - slightly irregular */
+  --radius-sm: 4px;
+  --radius-md: 255px 15px 225px 15px/15px 225px 15px 255px;
+  --radius-lg: 255px 25px 225px 25px/25px 225px 25px 255px;
+  --radius-xl: 300px 30px 200px 30px/30px 200px 30px 300px;
   --radius-full: 9999px;
 
   /* Typography */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'Outfit', 'Inter', sans-serif;
+  --font-sans: 'Patrick Hand', 'Comic Sans MS', cursive, sans-serif;
+  --font-display: 'Patrick Hand', 'Comic Sans MS', cursive, sans-serif;
 
   /* Transitions */
-  --transition-fast: 0.15s ease;
-  --transition-base: 0.25s ease;
-  --transition-slow: 0.4s ease;
+  --transition-fast: 0.1s ease;
+  --transition-base: 0.15s ease;
+  --transition-slow: 0.2s ease;
 
   /* Panic Meter Colors */
-  --panic-safe: hsl(142, 69%, 48%);
-  --panic-caution: hsl(48, 96%, 54%);
-  --panic-warning: hsl(38, 92%, 55%);
-  --panic-danger: hsl(20, 90%, 55%);
-  --panic-critical: hsl(350, 80%, 58%);
+  --panic-safe: #2a9d8f;
+  --panic-caution: #e9c46a;
+  --panic-warning: #f4a261;
+  --panic-danger: #e76f51;
+  --panic-critical: #e63946;
 }
 
-/* Light Theme */
 [data-theme="light"] {
-  --bg-base: hsl(220, 20%, 97%);
-  --bg-surface: hsl(0, 0%, 100%);
-  --bg-surface2: hsl(220, 15%, 94%);
-  --bg-surface3: hsl(220, 15%, 90%);
-  --bg-card: hsl(0, 0%, 100%);
-
-  --text-primary: hsl(230, 20%, 10%);
-  --text-secondary: hsl(230, 10%, 35%);
-  --text-muted: hsl(230, 8%, 55%);
-  --text-inverse: hsl(230, 15%, 95%);
-
-  --border-subtle: hsl(220, 15%, 90%);
-  --border-default: hsl(220, 15%, 83%);
-  --border-strong: hsl(220, 15%, 70%);
-
-  --grad-surface: linear-gradient(135deg, hsl(0, 0%, 99%) 0%, hsl(220, 15%, 96%) 100%);
-  --grad-card: linear-gradient(145deg, hsl(0, 0%, 100%) 0%, hsl(220, 15%, 97%) 100%);
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.1);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  /* Override to ensure consistency */
+  --bg-base: #FAF3E0;
+  --bg-surface: #FDF6E3;
 }
 
 /* ============================================================
@@ -360,8 +342,8 @@ h1, h2, h3, h4, h5, h6 {
    CARDS
    ============================================================ */
 .card {
-  background: var(--grad-card);
-  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  border: 2px solid var(--border-default);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
   box-shadow: var(--shadow-md);
@@ -369,9 +351,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .card:hover {
-  box-shadow: var(--shadow-lg);
-  border-color: var(--border-default);
   transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
 }
 
 .card-glass {
@@ -406,29 +387,29 @@ h1, h2, h3, h4, h5, h6 {
   justify-content: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-5);
+  border: 2px solid #000;
   border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-family: var(--font-sans);
+  font-weight: 700;
   transition: all var(--transition-fast);
   white-space: nowrap;
   position: relative;
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  background: #fff;
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.btn::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(255,255,255,0);
-  transition: background var(--transition-fast);
-}
-
-.btn:hover::after {
-  background: rgba(255,255,255,0.08);
+.btn:hover {
+  transform: scale(1.02);
 }
 
 .btn:active {
-  transform: scale(0.98);
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #000;
 }
 
 .btn-primary {
@@ -517,25 +498,27 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .form-input {
-  background: var(--bg-surface2);
-  border: 1px solid var(--border-default);
+  background: #FFF;
+  border: 2px solid #000;
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   transition: all var(--transition-fast);
   width: 100%;
   outline: none;
+  box-shadow: inset 1px 1px 0px rgba(0,0,0,0.1);
 }
 
 .form-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px hsl(250,84%,62%,0.15);
-  background: var(--bg-surface3);
+  border-color: #000;
+  box-shadow: 3px 3px 0px #000;
+  transform: scale(1.01);
 }
 
 .form-input::placeholder {
   color: var(--text-muted);
+  font-family: 'Patrick Hand', cursive;
 }
 
 .form-select {
@@ -1056,27 +1039,13 @@ h1, h2, h3, h4, h5, h6 {
    LAST NIGHT MODE
    ============================================================ */
 .last-night-container {
-  background: linear-gradient(135deg, hsl(230,30%,6%) 0%, hsl(250,40%,8%) 50%, hsl(230,30%,6%) 100%);
+  background: var(--bg-card);
   min-height: 100%;
   position: relative;
   overflow: hidden;
 }
 
-.last-night-container::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(ellipse at center, hsl(280,60%,20%,0.15) 0%, transparent 60%);
-  animation: pulseBg 4s ease-in-out infinite;
-}
-
-@keyframes pulseBg {
-  0%, 100% { transform: scale(1); opacity: 0.5; }
-  50% { transform: scale(1.1); opacity: 1; }
-}
+/* Background pulse removed for doodle style simplicity */
 
 /* ============================================================
    AUTH PAGES

@@ -12,6 +12,7 @@ const studentNav = [
   { path: '/gamification', icon: '🏆', label: 'Achievements' },
   { path: '/study-groups', icon: '👥', label: 'Study Groups' },
   { path: '/analytics', icon: '📈', label: 'My Progress' },
+  { path: '/profile', icon: '👤', label: 'My Profile' },
 ]
 
 const teacherNav = [
@@ -20,6 +21,7 @@ const teacherNav = [
   { path: '/teacher/materials', icon: '📁', label: 'Materials' },
   { path: '/teacher/pyq', icon: '📄', label: 'Upload PYQs' },
   { path: '/teacher/analytics', icon: '📈', label: 'Class Analytics' },
+  { path: '/profile', icon: '👤', label: 'Teacher Profile' },
 ]
 
 export default function Sidebar() {
@@ -69,15 +71,10 @@ export default function Sidebar() {
 
       {/* Bottom section */}
       <div className="nav-section">
-        <div className="nav-section-label">Settings</div>
         <button className="nav-item" onClick={toggleTheme}>
           <span className="nav-icon">{theme === 'dark' ? '☀️' : '🌙'}</span>
           <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
         </button>
-        <NavLink to="/profile" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-          <span className="nav-icon">👤</span>
-          <span>Profile</span>
-        </NavLink>
       </div>
 
       {/* User Profile */}
